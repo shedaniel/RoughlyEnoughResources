@@ -21,6 +21,7 @@ import me.shedaniel.rei.api.common.util.EntryStacks;
 import me.shedaniel.rei.impl.client.gui.widget.EntryWidget;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -120,7 +121,7 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
             String string = String.valueOf(count);
             matrices.translate(0.0D, 0.0D, getZ() + 400.0F);
             MultiBufferSource.BufferSource immediate = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
-            font.drawInBatch(string, (float) (innerBounds.x + 19 - 2 - font.width(string)), (float) (innerBounds.y + 6 + 3), 16777215, true, matrices.last().pose(), immediate, false, 0, 15728880);
+            font.drawInBatch(string, (float) (innerBounds.x + 19 - 2 - font.width(string)), (float) (innerBounds.y + 6 + 3), 16777215, true, matrices.last().pose(), immediate, Font.DisplayMode.NORMAL, 0, 15728880, false);
             immediate.endBatch();
             matrices.popPose();
         }
@@ -229,9 +230,7 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
             ScissorsHandler.INSTANCE.scissor(bounds);
             RenderSystem.enableBlend();
             RenderSystem.blendFuncSeparate(770, 771, 0, 1);
-            RenderSystem.disableTexture();
             renderScrollBar();
-            RenderSystem.enableTexture();
             RenderSystem.disableBlend();
             ScissorsHandler.INSTANCE.removeLastScissor();
         }

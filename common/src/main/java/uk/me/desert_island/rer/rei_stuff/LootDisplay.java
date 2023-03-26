@@ -426,7 +426,7 @@ public abstract class LootDisplay implements Display {
         ClientLevel world = Minecraft.getInstance().level;
         Optional<SmeltingRecipe> optional = Minecraft.getInstance().getConnection().getRecipeManager().getRecipeFor(RecipeType.SMELTING, new SimpleContainer(stack.<ItemStack>castValue()), world);
         if (optional.isPresent()) {
-            ItemStack itemStack = optional.get().getResultItem();
+            ItemStack itemStack = optional.get().getResultItem(world.registryAccess());
             if (!itemStack.isEmpty()) {
                 EntryStack<?> entryStack = EntryStacks.of(itemStack.copy());
                 entryStack.<ItemStack>castValue().setCount(stack.<ItemStack>castValue().getCount());
