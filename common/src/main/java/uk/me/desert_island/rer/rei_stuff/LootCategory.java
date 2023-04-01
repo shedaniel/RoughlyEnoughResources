@@ -121,7 +121,7 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
             String string = String.valueOf(count);
             matrices.translate(0.0D, 0.0D, getZ() + 400.0F);
             MultiBufferSource.BufferSource immediate = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
-            font.drawInBatch(string, (float) (innerBounds.x + 19 - 2 - font.width(string)), (float) (innerBounds.y + 6 + 3), 16777215, true, matrices.last().pose(), immediate, Font.DisplayMode.NORMAL, 0, 15728880, false);
+            font.drawInBatch(string, (float) (innerBounds.x + 19 - 2 - font.width(string)), (float) (innerBounds.y + 6 + 3), 16777215, true, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880, false);
             immediate.endBatch();
             matrices.popPose();
         }
