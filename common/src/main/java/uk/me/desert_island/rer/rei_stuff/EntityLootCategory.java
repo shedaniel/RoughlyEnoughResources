@@ -57,6 +57,11 @@ public class EntityLootCategory extends LootCategory {
             return;
         }
 
+        if(Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity) == null){
+            RERUtils.LOGGER.warn("can't create a %s entity, render is null", entityLootDisplay.getInputEntity());
+            return;
+        }
+
         widgets.add(Widgets.createSlotBase(entityBounds));
         widgets.add(Widgets.createDrawableWidget((helper, matrices, mouseX, mouseY, delta) -> {
             ScissorsHandler.INSTANCE.scissor(new Rectangle(entityBounds.x + 1, entityBounds.y + 1, entityBounds.width - 2, entityBounds.height - 2));
