@@ -1,11 +1,9 @@
 package uk.me.desert_island.rer;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.architectury.platform.Platform;
-import me.shedaniel.math.Point;
 import me.shedaniel.math.Rectangle;
 import me.shedaniel.rei.api.client.REIRuntime;
-import me.shedaniel.rei.api.client.gui.AbstractRenderer;
+import me.shedaniel.rei.api.client.gui.Renderer;
 import me.shedaniel.rei.api.client.gui.widgets.Tooltip;
 import me.shedaniel.rei.api.client.gui.widgets.TooltipContext;
 import me.shedaniel.rei.api.client.util.ClientEntryStacks;
@@ -15,6 +13,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -100,14 +99,16 @@ public class RERUtils {
     public static EntryStack<?> fromBlockToItemStackWithText(Block block) {
         EntryStack<?> stack = fromBlockToItemStack(block);
         if (stack.isEmpty()) {
-            return ClientEntryStacks.of(new AbstractRenderer() {
+            return ClientEntryStacks.of(new Renderer() {
                 @Override
-                public void render(PoseStack matrices, Rectangle rectangle, int i, int i1, float v) {
+                public void render(GuiGraphics graphics, Rectangle rectangle, int i, int i1, float v) {
                     Minecraft instance = Minecraft.getInstance();
                     Font font = instance.font;
                     String text = "?";
                     int width = font.width(text);
-                    font.draw(matrices, text, rectangle.getCenterX() - width / 2f + 0.2f, rectangle.getCenterY() - font.lineHeight / 2f + 1f, REIRuntime.getInstance().isDarkThemeEnabled() ? -4473925 : -12566464);
+                    graphics.drawString(font, text, (int) (rectangle.getCenterX() - width / 2f + 0.2f),
+                            (int) (rectangle.getCenterY() - font.lineHeight / 2f + 1f),
+                            REIRuntime.getInstance().isDarkThemeEnabled() ? -4473925 : -12566464);
                 }
 
                 @Override

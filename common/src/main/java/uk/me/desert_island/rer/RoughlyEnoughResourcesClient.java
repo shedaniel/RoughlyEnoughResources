@@ -14,7 +14,10 @@ import uk.me.desert_island.rer.client.ClientLootCache;
 import uk.me.desert_island.rer.client.ClientWorldGenState;
 
 import static io.netty.buffer.Unpooled.compositeBuffer;
-import static uk.me.desert_island.rer.RoughlyEnoughResources.*;
+import static uk.me.desert_island.rer.RoughlyEnoughResources.SEND_LOOT_INFO;
+import static uk.me.desert_island.rer.RoughlyEnoughResources.SEND_WORLD_GEN_STATE_CHUNK;
+import static uk.me.desert_island.rer.RoughlyEnoughResources.SEND_WORLD_GEN_STATE_DONE;
+import static uk.me.desert_island.rer.RoughlyEnoughResources.SEND_WORLD_GEN_STATE_START;
 
 @Environment(EnvType.CLIENT)
 public class RoughlyEnoughResourcesClient {
@@ -37,10 +40,6 @@ public class RoughlyEnoughResourcesClient {
             FriendlyByteBuf buf = new FriendlyByteBuf(world_state_buf);
             ResourceLocation worldId = buf.readResourceLocation();
             ResourceKey<Level> world = ResourceKey.create(Registries.DIMENSION, worldId);
-            if (world == null) {
-                RERUtils.LOGGER.error("Found unregistered dimension type %s, do the server and client have the same dimensions?", worldId.toString());
-                return;
-            }
             ClientWorldGenState state = ClientWorldGenState.byWorld(world);
             state.fromNetwork(buf);
             RERUtils.LOGGER.debug("Received data for " + worldId);

@@ -1,5 +1,7 @@
 package uk.me.desert_island.rer.rei_stuff;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import java.util.List;
 import me.shedaniel.clothconfig2.api.ScissorsHandler;
 import me.shedaniel.math.Point;
 import me.shedaniel.math.Rectangle;
@@ -19,10 +21,9 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import uk.me.desert_island.rer.RERUtils;
 
-import java.util.List;
-
 public class EntityLootCategory extends LootCategory {
-    public static final CategoryIdentifier<LootDisplay> CATEGORY_ID = CategoryIdentifier.of("roughlyenoughresources", "entity_loot_category");
+    public static final CategoryIdentifier<LootDisplay> CATEGORY_ID = CategoryIdentifier.of("roughlyenoughresources",
+            "entity_loot_category");
 
     @Override
     public CategoryIdentifier<? extends LootDisplay> getCategoryIdentifier() {
@@ -45,7 +46,6 @@ public class EntityLootCategory extends LootCategory {
     }
 
     @Override
-    @SuppressWarnings({"resource"}) // MinecraftClient.getInstance() is a singleton, and won't actually leak.
     protected void registerWidget(LootDisplay display, List<Widget> widgets, Rectangle bounds) {
         EntityLootDisplay entityLootDisplay = (EntityLootDisplay) display;
         Rectangle entityBounds = new Rectangle(bounds.getMinX(), bounds.getMinY(), 54, 54);
@@ -56,9 +56,15 @@ public class EntityLootCategory extends LootCategory {
             return;
         }
 
+        if (Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity) == null) {
+            RERUtils.LOGGER.warn("can't create a %s entity, render is null", entityLootDisplay.getInputEntity());
+            return;
+        }
+
         widgets.add(Widgets.createSlotBase(entityBounds));
-        widgets.add(Widgets.createDrawableWidget((helper, matrices, mouseX, mouseY, delta) -> {
-            ScissorsHandler.INSTANCE.scissor(new Rectangle(entityBounds.x + 1, entityBounds.y + 1, entityBounds.width - 2, entityBounds.height - 2));
+        widgets.add(Widgets.createDrawableWidget((graphics, mouseX, mouseY, delta) -> {
+            ScissorsHandler.INSTANCE.scissor(new Rectangle(entityBounds.x + 1, entityBounds.y + 1,
+                    entityBounds.width - 2, entityBounds.height - 2));
             float f = (float) Math.atan((entityBounds.getCenterX() - mouseX) / 40.0F);
             float g = (float) Math.atan((entityBounds.getCenterY() - mouseY) / 40.0F);
             float size = 32;
@@ -66,21 +72,16 @@ public class EntityLootCategory extends LootCategory {
                 size /= Math.max(entity.getBbWidth(), entity.getBbHeight());
             }
 
-            matrices.pushPose();
-            matrices.translate(entityBounds.getCenterX(), entityBounds.getCenterY() + 20, 1050.0);
-            matrices.scale(1, 1, -1);
-            matrices.translate(0.0D, 0.0D, 1000.0D);
-            matrices.scale(size, size, size);
-            // ZP = new Vector3f(0.0F, 0.0F, 1.0F)
-            // XP = new Vector3f(1.0F, 0.0F, 0.0F);
+            PoseStack stack = graphics.pose();
+            stack.pushPose();
+            stack.translate(entityBounds.getCenterX(), entityBounds.getCenterY() + 20, 1050.0);
+            stack.scale(1, 1, -1);
+            stack.translate(0.0D, 0.0D, 1000.0D);
+            stack.scale(size, size, size);
             Quaternionf ZP = new Quaternionf().rotateAxis(180.0F * 0.017453292F, new Vector3f(0.0F, 0.0F, 1.0F));
             Quaternionf XP = new Quaternionf().rotateAxis(g * 20.0F * 0.017453292F, new Vector3f(1.0F, 0.0F, 0.0F));
-            //Quaternionf quaternion = Vector3f.ZP.rotationDegrees(180.0F);
-            //Quaternionf quaternion2 = Vector3f.XP.rotationDegrees(g * 20.0F);
-            Quaternionf quaternion = ZP;
-            Quaternionf quaternion2 = XP;
-            quaternion.mul(quaternion2);
-            matrices.mulPose(quaternion);
+            ZP.mul(XP);
+            stack.mulPose(ZP);
             float i = entity.getYRot();
             float j = entity.getXRot();
             float h = 0, k = 0, l = 0;
@@ -97,11 +98,11 @@ public class EntityLootCategory extends LootCategory {
             }
 
             EntityRenderDispatcher entityRenderDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
-            quaternion2.conjugate();
-            entityRenderDispatcher.overrideCameraOrientation(quaternion2);
+            XP.conjugate();
+            entityRenderDispatcher.overrideCameraOrientation(XP);
             entityRenderDispatcher.setRenderShadow(false);
             MultiBufferSource.BufferSource immediate = Minecraft.getInstance().renderBuffers().bufferSource();
-            entityRenderDispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, matrices, immediate, 15728880);
+            entityRenderDispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, stack, immediate, 15728880);
             immediate.endBatch();
             entityRenderDispatcher.setRenderShadow(true);
             entity.setYRot(i);
@@ -113,7 +114,7 @@ public class EntityLootCategory extends LootCategory {
                 ((LivingEntity) entity).yHeadRot = l;
             }
 
-            matrices.popPose();
+            stack.popPose();
             ScissorsHandler.INSTANCE.removeLastScissor();
         }));
 

@@ -1,30 +1,42 @@
 package uk.me.desert_island.rer;
 
 import com.google.common.collect.Lists;
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import dev.architectury.networking.NetworkManager;
 import dev.architectury.utils.GameInstance;
 import io.netty.buffer.Unpooled;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.MathContext;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.loot.Deserializers;
+import net.minecraft.world.level.storage.loot.LootDataManager;
+import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.LootTables;
 import uk.me.desert_island.rer.mixin.IdentifierHooks;
-
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.math.MathContext;
-import java.util.*;
 
 public class RoughlyEnoughResources {
     public static final Gson GSON = Deserializers.createLootTableSerializer().create();
 
-    public static final ResourceLocation SEND_WORLD_GEN_STATE_START = new ResourceLocation("roughlyenoughresources", "swds_start");
-    public static final ResourceLocation SEND_WORLD_GEN_STATE_CHUNK = new ResourceLocation("roughlyenoughresources", "swds_chunk");
-    public static final ResourceLocation SEND_WORLD_GEN_STATE_DONE = new ResourceLocation("roughlyenoughresources", "swds_done");
+    public static final ResourceLocation SEND_WORLD_GEN_STATE_START = new ResourceLocation("roughlyenoughresources",
+            "swds_start");
+    public static final ResourceLocation SEND_WORLD_GEN_STATE_CHUNK = new ResourceLocation("roughlyenoughresources",
+            "swds_chunk");
+    public static final ResourceLocation SEND_WORLD_GEN_STATE_DONE = new ResourceLocation("roughlyenoughresources",
+            "swds_done");
     public static final ResourceLocation SEND_LOOT_INFO = new ResourceLocation("roughlyenoughresources", "sli");
     public static final ResourceLocation ASK_SYNC_INFO = new ResourceLocation("roughlyenoughresources", "asi");
 
@@ -34,12 +46,14 @@ public class RoughlyEnoughResources {
 
     public static void onInitialize() {
         RERUtils.LOGGER.info("RoughlyEnoughPacketSize?  Possibly.");
-        NetworkManager.registerReceiver(NetworkManager.c2s(), ASK_SYNC_INFO, (buf, context) -> context.queue(() -> sendLootToPlayers(GameInstance.getServer(), Collections.singletonList((ServerPlayer) context.getPlayer()))));
+        NetworkManager.registerReceiver(NetworkManager.c2s(), ASK_SYNC_INFO,
+                (buf, context) -> context.queue(() -> sendLootToPlayers(GameInstance.getServer(),
+                        Collections.singletonList((ServerPlayer) context.getPlayer()))));
     }
 
     public static void sendLootToPlayers(MinecraftServer server, List<ServerPlayer> players) {
-        LootTables lootManager = server.getLootTables();
-        List<ResourceLocation> names = Lists.newArrayList(lootManager.getIds());
+        LootDataManager lootManager = server.getLootData();
+        List<ResourceLocation> names = Lists.newArrayList(lootManager.getKeys(LootDataType.TABLE));
 
         int size = 50;
         for (int i = 0; i < names.size(); i += size) {
@@ -48,12 +62,13 @@ public class RoughlyEnoughResources {
             buf.writeInt(end - i);
             for (int j = i; j < end; j++) {
                 ResourceLocation identifier = names.get(j);
-                LootTable table = lootManager.get(identifier);
+                LootTable table = lootManager.getLootTable(identifier);
                 writeIdentifier(buf, identifier);
                 writeJson(buf, optimiseTable(GSON.toJsonTree(table)));
             }
             for (ServerPlayer player : players) {
-                NetworkManager.sendToPlayer(player, RoughlyEnoughResources.SEND_LOOT_INFO, new FriendlyByteBuf(buf.duplicate()));
+                NetworkManager.sendToPlayer(player, RoughlyEnoughResources.SEND_LOOT_INFO,
+                        new FriendlyByteBuf(buf.duplicate()));
             }
         }
     }
@@ -181,62 +196,72 @@ public class RoughlyEnoughResources {
     public static JsonElement readJson(FriendlyByteBuf buf) {
         byte type = buf.readByte();
         switch (type) {
-            case 0:
-                return JsonNull.INSTANCE;
-            case 12:
-                int size = buf.readVarInt();
-                JsonArray array = new JsonArray(size);
-                for (int i = 0; i < size; i++) {
-                    array.add(readJson(buf));
-                }
-                return array;
-            case 13:
-                size = buf.readVarInt();
-                JsonObject object = new JsonObject();
-                for (int i = 0; i < size; i++) {
-                    String key = buf.readUtf();
-                    object.add(key, readJson(buf));
-                }
-                return object;
-            default:
-                if (type < 1 || type > 11) {
-                    throw new IllegalArgumentException("Unknown json type: " + type);
-                }
-                return readJsonPrimitive(type, buf);
+        case 0:
+            return JsonNull.INSTANCE;
+        case 12:
+            int size = buf.readVarInt();
+            JsonArray array = new JsonArray(size);
+            for (int i = 0; i < size; i++) {
+                array.add(readJson(buf));
+            }
+            return array;
+        case 13:
+            size = buf.readVarInt();
+            JsonObject object = new JsonObject();
+            for (int i = 0; i < size; i++) {
+                String key = buf.readUtf();
+                object.add(key, readJson(buf));
+            }
+            return object;
+        default:
+            if (type < 1 || type > 11) {
+                throw new IllegalArgumentException("Unknown json type: " + type);
+            }
+            return readJsonPrimitive(type, buf);
         }
     }
 
     private static JsonPrimitive readJsonPrimitive(int type, FriendlyByteBuf buf) {
         switch (type) {
-            case 1:
-                return new JsonPrimitive(buf.readUtf());
-            case 2:
-                return new JsonPrimitive(false);
-            case 3:
-                return new JsonPrimitive(true);
-            case 4:
-                return new JsonPrimitive(buf.readVarInt());
-            case 5:
-                return new JsonPrimitive(buf.readVarLong());
-            case 6:
-                return new JsonPrimitive(buf.readShort());
-            case 7:
-                return new JsonPrimitive(buf.readByte());
-            case 8:
-                return new JsonPrimitive(new BigInteger(buf.readByteArray()));
-            case 9:
-                return new JsonPrimitive(buf.readFloat());
-            case 10:
-                return new JsonPrimitive(buf.readDouble());
-            case 11:
-                // deserialize with unscaled value, scale, and precision
-                byte[] unscaledValue = buf.readByteArray();
-                int scale = buf.readInt();
-                int precision = buf.readInt();
-                MathContext context = new MathContext(precision);
-                return new JsonPrimitive(new BigDecimal(new BigInteger(unscaledValue), scale, context));
-            default:
-                throw new IllegalArgumentException("Unknown json primitive type: " + type);
+        case 1 -> {
+            return new JsonPrimitive(buf.readUtf());
+        }
+        case 2 -> {
+            return new JsonPrimitive(false);
+        }
+        case 3 -> {
+            return new JsonPrimitive(true);
+        }
+        case 4 -> {
+            return new JsonPrimitive(buf.readVarInt());
+        }
+        case 5 -> {
+            return new JsonPrimitive(buf.readVarLong());
+        }
+        case 6 -> {
+            return new JsonPrimitive(buf.readShort());
+        }
+        case 7 -> {
+            return new JsonPrimitive(buf.readByte());
+        }
+        case 8 -> {
+            return new JsonPrimitive(new BigInteger(buf.readByteArray()));
+        }
+        case 9 -> {
+            return new JsonPrimitive(buf.readFloat());
+        }
+        case 10 -> {
+            return new JsonPrimitive(buf.readDouble());
+        }
+        case 11 -> {
+            // deserialize with unscaled value, scale, and precision
+            byte[] unscaledValue = buf.readByteArray();
+            int scale = buf.readInt();
+            int precision = buf.readInt();
+            MathContext context = new MathContext(precision);
+            return new JsonPrimitive(new BigDecimal(new BigInteger(unscaledValue), scale, context));
+        }
+        default -> throw new IllegalArgumentException("Unknown json primitive type: " + type);
         }
     }
 }
