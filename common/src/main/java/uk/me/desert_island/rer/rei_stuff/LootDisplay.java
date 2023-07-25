@@ -5,13 +5,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.architectury.platform.Platform;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.StreamSupport;
 import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 import me.shedaniel.rei.api.common.display.Display;
 import me.shedaniel.rei.api.common.entry.EntryIngredient;
@@ -41,6 +34,14 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSet;
 import uk.me.desert_island.rer.RERUtils;
 import uk.me.desert_island.rer.client.ClientLootCache;
+
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.StreamSupport;
 
 @SuppressWarnings("StatementWithEmptyBody")
 @Environment(EnvType.CLIENT)
@@ -168,17 +169,14 @@ public abstract class LootDisplay implements Display {
             }
         } else if (kind.equals("minecraft:block_state_property") || kind.equals("minecraft:entity_properties") || kind.equals("minecraft:damage_source_properties")) {
             // ignore
-        } else if (kind.equals("minecraft:match_tool") && conditionObject.has("predicate") && conditionObject.get(
-                "predicate").getAsJsonObject().has("enchantments")) {
-            for (JsonElement enchantmentElement : conditionObject.get("predicate").getAsJsonObject().get(
-                    "enchantments").getAsJsonArray()) {
+        } else if (kind.equals("minecraft:match_tool") && conditionObject.has("predicate") && conditionObject.get("predicate").getAsJsonObject().has("enchantments")) {
+            for (JsonElement enchantmentElement : conditionObject.get("predicate").getAsJsonObject().get("enchantments").getAsJsonArray()) {
                 JsonObject enchantmentObject = enchantmentElement.getAsJsonObject();
                 String enchantmentString = enchantmentObject.get("enchantment").getAsString();
                 Enchantment enchantment = BuiltInRegistries.ENCHANTMENT.get(new ResourceLocation(enchantmentString));
                 if (enchantment != null) {
                     for (LootOutput output : outputs) {
-                        output.addExtraText(I18n.get("rer.condition.enchantment",
-                                I18n.get(enchantment.getDescriptionId()).toLowerCase()));
+                        output.addExtraText(I18n.get("rer.condition.enchantment", I18n.get(enchantment.getDescriptionId()).toLowerCase()));
                     }
                 }
             }
@@ -192,8 +190,7 @@ public abstract class LootDisplay implements Display {
             for (LootOutput output : outputs) {
                 output.addExtraText(I18n.get("rer.condition.chance.looting", FORMAT.format(chance)));
             }
-        } else if (kind.equals("minecraft:match_tool") && conditionObject.has("predicate") && conditionObject.get(
-                "predicate").getAsJsonObject().has("item")) {
+        } else if (kind.equals("minecraft:match_tool") && conditionObject.has("predicate") && conditionObject.get("predicate").getAsJsonObject().has("item")) {
             String itemId = conditionObject.get("predicate").getAsJsonObject().get("item").getAsString();
             Item item = BuiltInRegistries.ITEM.get(new ResourceLocation(itemId));
             for (LootOutput output : outputs) {
@@ -216,33 +213,34 @@ public abstract class LootDisplay implements Display {
         /* creeper_spawn_egg -> minecraft:tag */
         /* elder_guardian_spawn_egg -> minecraft:loot_table */
         switch (type) {
-        case "minecraft:item":
-            outputs.addAll(munchLootEntryItemJson(object));
-            break;
-        case "minecraft:alternatives":
-            outputs.addAll(munchLootEntryAlternativesJson(object));
-            break;
-        case "minecraft:empty":
-            /* do nothing */
-            break;
-        case "minecraft:loot_table":
-            JsonElement json = ClientLootCache.ID_TO_LOOT.get(new ResourceLocation(object.get("name").getAsString()));
-            if (json != null)
-                outputs.addAll(munchLootSupplierJson(json));
-            break;
-        case "minecraft:tag":
-            TagKey<Item> tag = TagKey.create(Registries.ITEM, new ResourceLocation(object.get("name").getAsString()));
-            outputs.addAll(StreamSupport.stream(BuiltInRegistries.ITEM.getTagOrEmpty(tag).spliterator(), false).map(Holder::value).map(item -> {
-                EntryStack<?> stack = EntryStacks.of(item);
-                LootOutput output = new LootOutput();
-                output.output = EntryIngredient.of(stack);
-                output.original = stack.copy();
-                return output;
-            }).toList());
-            break;
-        default:
-            RERUtils.LOGGER.debug("Don't know how to deal with entry of type %s (%s)", type, object);
-            break;
+            case "minecraft:item":
+                outputs.addAll(munchLootEntryItemJson(object));
+                break;
+            case "minecraft:alternatives":
+                outputs.addAll(munchLootEntryAlternativesJson(object));
+                break;
+            case "minecraft:empty":
+                /* do nothing */
+                break;
+            case "minecraft:loot_table":
+                JsonElement json = ClientLootCache.ID_TO_LOOT.get(new ResourceLocation(object.get("name").getAsString()));
+                if (json != null)
+                    outputs.addAll(munchLootSupplierJson(json));
+                break;
+            case "minecraft:tag":
+                TagKey<Item> tag = TagKey.create(Registries.ITEM, new ResourceLocation(object.get("name").getAsString()));
+                if (tag != null)
+                    outputs.addAll(StreamSupport.stream(BuiltInRegistries.ITEM.getTagOrEmpty(tag).spliterator(), false).map(Holder::value).map(item -> {
+                        EntryStack<?> stack = EntryStacks.of(item);
+                        LootOutput output = new LootOutput();
+                        output.output = EntryIngredient.of(stack);
+                        output.original = stack.copy();
+                        return output;
+                    }).toList());
+                break;
+            default:
+                RERUtils.LOGGER.debug("Don't know how to deal with entry of type %s (%s)", type, object);
+                break;
         }
 
         if (object.has("conditions")) {
@@ -349,8 +347,7 @@ public abstract class LootDisplay implements Display {
                     output.addExtraTextCount(I18n.get("rer.function.atMost", max));
             }
             createNew = min != null || max != null;
-        } else if (kind.equals("minecraft:copy_nbt") || kind.equals("minecraft:copy_name") || kind.equals("minecraft"
-                + ":explosion_decay") || kind.equals("minecraft:set_contents") || kind.equals("minecraft:copy_state")) {
+        } else if (kind.equals("minecraft:copy_nbt") || kind.equals("minecraft:copy_name") || kind.equals("minecraft:explosion_decay") || kind.equals("minecraft:set_contents") || kind.equals("minecraft:copy_state")) {
             // Ignored
         } else if (kind.equals("minecraft:set_nbt") && functionObject.has("tag")) {
             try {
@@ -380,22 +377,22 @@ public abstract class LootDisplay implements Display {
             Enchantment enchantment = BuiltInRegistries.ENCHANTMENT.get(new ResourceLocation(enchantmentString));
             if (enchantment != null) {
                 for (LootOutput output : outputs) {
-                    output.addExtraTextCount(I18n.get("rer.function.bonus.enchant",
-                            I18n.get(enchantment.getDescriptionId()).toLowerCase()));
+                    output.addExtraTextCount(I18n.get("rer.function.bonus.enchant", I18n.get(enchantment.getDescriptionId()).toLowerCase()));
                 }
                 createNew = true;
             }
         } else if (kind.equals("minecraft:looting_enchant")) {
             for (LootOutput output : outputs) {
-                output.addExtraTextCount(I18n.get("rer.function.bonus.enchant",
-                        I18n.get(Enchantments.MOB_LOOTING.getDescriptionId()).toLowerCase()));
+                output.addExtraTextCount(I18n.get("rer.function.bonus.enchant", I18n.get(Enchantments.MOB_LOOTING.getDescriptionId()).toLowerCase()));
             }
             createNew = true;
         } else if (kind.equals("minecraft:furnace_smelt")) {
             for (LootOutput output : outputs) {
                 ArrayList<EntryStack<?>> newList = new ArrayList<>(output.output);
                 output.original = smelt(output.original);
-                newList.replaceAll(this::smelt);
+                for (int i = 0; i < newList.size(); i++) {
+                    newList.set(i, smelt(newList.get(i)));
+                }
                 output.output = EntryIngredient.of(newList);
             }
             createNew = true;
@@ -427,9 +424,7 @@ public abstract class LootDisplay implements Display {
         if (stack.isEmpty() || stack.getType() != VanillaEntryTypes.ITEM)
             return stack.copy();
         ClientLevel world = Minecraft.getInstance().level;
-        Optional<SmeltingRecipe> optional =
-                Minecraft.getInstance().getConnection().getRecipeManager().getRecipeFor(RecipeType.SMELTING,
-                        new SimpleContainer(stack.<ItemStack>castValue()), world);
+        Optional<SmeltingRecipe> optional = Minecraft.getInstance().getConnection().getRecipeManager().getRecipeFor(RecipeType.SMELTING, new SimpleContainer(stack.<ItemStack>castValue()), world);
         if (optional.isPresent()) {
             ItemStack itemStack = optional.get().getResultItem(world.registryAccess());
             if (!itemStack.isEmpty()) {

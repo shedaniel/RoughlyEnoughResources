@@ -170,8 +170,10 @@ public class WorldGenState extends SavedData {
 
     private static void writeVarLongArray(FriendlyByteBuf buf, long[] array) {
         buf.writeVarInt(array.length);
-        for (long l : array) {
-            buf.writeVarLong(l);
+        int length = array.length;
+
+        for (int var4 = 0; var4 < length; ++var4) {
+            buf.writeVarLong(array[var4]);
         }
     }
 

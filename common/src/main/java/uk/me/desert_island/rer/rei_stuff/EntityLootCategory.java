@@ -21,9 +21,10 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import uk.me.desert_island.rer.RERUtils;
 
+import java.util.List;
+
 public class EntityLootCategory extends LootCategory {
-    public static final CategoryIdentifier<LootDisplay> CATEGORY_ID = CategoryIdentifier.of("roughlyenoughresources",
-            "entity_loot_category");
+    public static final CategoryIdentifier<LootDisplay> CATEGORY_ID = CategoryIdentifier.of("roughlyenoughresources", "entity_loot_category");
 
     @Override
     public CategoryIdentifier<? extends LootDisplay> getCategoryIdentifier() {
@@ -46,6 +47,7 @@ public class EntityLootCategory extends LootCategory {
     }
 
     @Override
+    @SuppressWarnings({"resource"}) // MinecraftClient.getInstance() is a singleton, and won't actually leak.
     protected void registerWidget(LootDisplay display, List<Widget> widgets, Rectangle bounds) {
         EntityLootDisplay entityLootDisplay = (EntityLootDisplay) display;
         Rectangle entityBounds = new Rectangle(bounds.getMinX(), bounds.getMinY(), 54, 54);
@@ -63,8 +65,7 @@ public class EntityLootCategory extends LootCategory {
 
         widgets.add(Widgets.createSlotBase(entityBounds));
         widgets.add(Widgets.createDrawableWidget((graphics, mouseX, mouseY, delta) -> {
-            ScissorsHandler.INSTANCE.scissor(new Rectangle(entityBounds.x + 1, entityBounds.y + 1,
-                    entityBounds.width - 2, entityBounds.height - 2));
+            ScissorsHandler.INSTANCE.scissor(new Rectangle(entityBounds.x + 1, entityBounds.y + 1, entityBounds.width - 2, entityBounds.height - 2));
             float f = (float) Math.atan((entityBounds.getCenterX() - mouseX) / 40.0F);
             float g = (float) Math.atan((entityBounds.getCenterY() - mouseY) / 40.0F);
             float size = 32;
@@ -72,16 +73,22 @@ public class EntityLootCategory extends LootCategory {
                 size /= Math.max(entity.getBbWidth(), entity.getBbHeight());
             }
 
-            PoseStack stack = graphics.pose();
-            stack.pushPose();
-            stack.translate(entityBounds.getCenterX(), entityBounds.getCenterY() + 20, 1050.0);
-            stack.scale(1, 1, -1);
-            stack.translate(0.0D, 0.0D, 1000.0D);
-            stack.scale(size, size, size);
+            PoseStack matrices = graphics.pose();
+            matrices.pushPose();
+            matrices.translate(entityBounds.getCenterX(), entityBounds.getCenterY() + 20, 1050.0);
+            matrices.scale(1, 1, -1);
+            matrices.translate(0.0D, 0.0D, 1000.0D);
+            matrices.scale(size, size, size);
+            // ZP = new Vector3f(0.0F, 0.0F, 1.0F)
+            // XP = new Vector3f(1.0F, 0.0F, 0.0F);
             Quaternionf ZP = new Quaternionf().rotateAxis(180.0F * 0.017453292F, new Vector3f(0.0F, 0.0F, 1.0F));
             Quaternionf XP = new Quaternionf().rotateAxis(g * 20.0F * 0.017453292F, new Vector3f(1.0F, 0.0F, 0.0F));
-            ZP.mul(XP);
-            stack.mulPose(ZP);
+            //Quaternionf quaternion = Vector3f.ZP.rotationDegrees(180.0F);
+            //Quaternionf quaternion2 = Vector3f.XP.rotationDegrees(g * 20.0F);
+            Quaternionf quaternion = ZP;
+            Quaternionf quaternion2 = XP;
+            quaternion.mul(quaternion2);
+            matrices.mulPose(quaternion);
             float i = entity.getYRot();
             float j = entity.getXRot();
             float h = 0, k = 0, l = 0;
@@ -98,11 +105,11 @@ public class EntityLootCategory extends LootCategory {
             }
 
             EntityRenderDispatcher entityRenderDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
-            XP.conjugate();
-            entityRenderDispatcher.overrideCameraOrientation(XP);
+            quaternion2.conjugate();
+            entityRenderDispatcher.overrideCameraOrientation(quaternion2);
             entityRenderDispatcher.setRenderShadow(false);
             MultiBufferSource.BufferSource immediate = Minecraft.getInstance().renderBuffers().bufferSource();
-            entityRenderDispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, stack, immediate, 15728880);
+            entityRenderDispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, matrices, immediate, 15728880);
             immediate.endBatch();
             entityRenderDispatcher.setRenderShadow(true);
             entity.setYRot(i);
@@ -114,7 +121,7 @@ public class EntityLootCategory extends LootCategory {
                 ((LivingEntity) entity).yHeadRot = l;
             }
 
-            stack.popPose();
+            matrices.popPose();
             ScissorsHandler.INSTANCE.removeLastScissor();
         }));
 

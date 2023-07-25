@@ -1,6 +1,7 @@
 package uk.me.desert_island.rer;
 
 import dev.architectury.platform.Platform;
+import me.shedaniel.math.Point;
 import me.shedaniel.math.Rectangle;
 import me.shedaniel.rei.api.client.REIRuntime;
 import me.shedaniel.rei.api.client.gui.Renderer;
@@ -106,9 +107,7 @@ public class RERUtils {
                     Font font = instance.font;
                     String text = "?";
                     int width = font.width(text);
-                    graphics.drawString(font, text, (int) (rectangle.getCenterX() - width / 2f + 0.2f),
-                            (int) (rectangle.getCenterY() - font.lineHeight / 2f + 1f),
-                            REIRuntime.getInstance().isDarkThemeEnabled() ? -4473925 : -12566464);
+                    graphics.drawString(font, text, (int) (rectangle.getCenterX() - width / 2f + 0.2f), (int) (rectangle.getCenterY() - font.lineHeight / 2f + 1f), REIRuntime.getInstance().isDarkThemeEnabled() ? -4473925 : -12566464);
                 }
 
                 @Override

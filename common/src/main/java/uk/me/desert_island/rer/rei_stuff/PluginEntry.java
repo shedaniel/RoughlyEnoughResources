@@ -1,7 +1,6 @@
 package uk.me.desert_island.rer.rei_stuff;
 
 import dev.architectury.event.EventResult;
-import java.util.concurrent.atomic.AtomicLongArray;
 import me.shedaniel.rei.api.client.plugins.REIClientPlugin;
 import me.shedaniel.rei.api.client.registry.category.CategoryRegistry;
 import me.shedaniel.rei.api.client.registry.display.DisplayRegistry;
@@ -12,13 +11,14 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import uk.me.desert_island.rer.RERUtils;
 import uk.me.desert_island.rer.client.ClientLootCache;
 import uk.me.desert_island.rer.client.ClientWorldGenState;
+
+import java.util.concurrent.atomic.AtomicLongArray;
 
 import static uk.me.desert_island.rer.RoughlyEnoughResources.WORLD_HEIGHT;
 
@@ -33,12 +33,6 @@ public class PluginEntry implements REIClientPlugin {
         }
         registry.add(new LootCategory());
         registry.add(new EntityLootCategory());
-        registry.configure(LootCategory.CATEGORY_ID, cfg -> cfg.setPlusButtonArea(bounds -> null));
-        registry.configure(EntityLootCategory.CATEGORY_ID, cfg -> cfg.setPlusButtonArea(bounds -> null));
-        for (ResourceKey<Level> world : Minecraft.getInstance().getConnection().levels()) {
-            registry.configure(WorldGenCategory.WORLD_IDENTIFIER_MAP.get(world),
-                    cfg -> cfg.setPlusButtonArea(bounds -> null));
-        }
     }
 
     @Override
@@ -50,7 +44,7 @@ public class PluginEntry implements REIClientPlugin {
 
             ResourceLocation dropTableId = block.getLootTable();
 
-            if (dropTableId != BuiltInLootTables.EMPTY) {
+            if (dropTableId != null && dropTableId != BuiltInLootTables.EMPTY) {
                 registry.add(new BlockLootDisplay(block));
             }
         }
@@ -58,7 +52,7 @@ public class PluginEntry implements REIClientPlugin {
         for (EntityType<?> entityType : BuiltInRegistries.ENTITY_TYPE) {
             ResourceLocation lootTableId = entityType.getDefaultLootTable();
 
-            if (lootTableId != BuiltInLootTables.EMPTY && SpawnEggItem.byId(entityType) != null) {
+            if (lootTableId != null && lootTableId != BuiltInLootTables.EMPTY) {
                 registry.add(new EntityLootDisplay(entityType));
             }
         }
