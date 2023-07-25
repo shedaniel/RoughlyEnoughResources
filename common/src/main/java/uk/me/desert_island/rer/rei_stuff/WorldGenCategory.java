@@ -185,7 +185,7 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
                             /*endy  */ startPoint.y + graphHeight,
                             /*color */ 0xff444444);
                 }
-                graphics.drawString(Minecraft.getInstance().font, String.valueOf(y), startPoint.x + yOffseted + 2, startPoint.y + 2, 0xff444444);
+                graphics.drawString(Minecraft.getInstance().font, String.valueOf(y), startPoint.x + yOffseted + 2, startPoint.y + 2, 0xff444444, false);
             }
 
             ScissorsHandler.INSTANCE.removeLastScissor();

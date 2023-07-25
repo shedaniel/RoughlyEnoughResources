@@ -7,8 +7,11 @@ import net.fabricmc.api.Environment;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+
+import java.util.Objects;
 
 @Environment(EnvType.CLIENT)
 public class EntityLootDisplay extends LootDisplay {
@@ -17,7 +20,7 @@ public class EntityLootDisplay extends LootDisplay {
 
     public EntityLootDisplay(EntityType<?> inputEntity) {
         this.inputEntity = inputEntity;
-        this.inputStack = EntryStacks.of(SpawnEggItem.byId(inputEntity));
+        this.inputStack = EntryStacks.of(Objects.requireNonNullElse(SpawnEggItem.byId(inputEntity), Items.AIR));
         this.lootTableId = inputEntity.getDefaultLootTable();
         this.contextType = LootContextParamSets.ENTITY;
     }
