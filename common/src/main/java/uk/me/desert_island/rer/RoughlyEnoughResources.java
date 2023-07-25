@@ -10,15 +10,15 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.loot.Deserializers;
+import net.minecraft.world.level.storage.loot.LootDataManager;
+import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.LootTables;
 import uk.me.desert_island.rer.mixin.IdentifierHooks;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.*;
-
 public class RoughlyEnoughResources {
     public static final Gson GSON = Deserializers.createLootTableSerializer().create();
 
@@ -38,8 +38,8 @@ public class RoughlyEnoughResources {
     }
 
     public static void sendLootToPlayers(MinecraftServer server, List<ServerPlayer> players) {
-        LootTables lootManager = server.getLootTables();
-        List<ResourceLocation> names = Lists.newArrayList(lootManager.getIds());
+        LootDataManager lootManager = server.getLootData();
+        List<ResourceLocation> names = Lists.newArrayList(lootManager.getKeys(LootDataType.TABLE));
 
         int size = 50;
         for (int i = 0; i < names.size(); i += size) {
@@ -48,7 +48,7 @@ public class RoughlyEnoughResources {
             buf.writeInt(end - i);
             for (int j = i; j < end; j++) {
                 ResourceLocation identifier = names.get(j);
-                LootTable table = lootManager.get(identifier);
+                LootTable table = lootManager.getLootTable(identifier);
                 writeIdentifier(buf, identifier);
                 writeJson(buf, optimiseTable(GSON.toJsonTree(table)));
             }

@@ -33,11 +33,6 @@ public class PluginEntry implements REIClientPlugin {
         }
         registry.add(new LootCategory());
         registry.add(new EntityLootCategory());
-        registry.removePlusButton(LootCategory.CATEGORY_ID);
-        registry.removePlusButton(EntityLootCategory.CATEGORY_ID);
-        for (ResourceKey<Level> world : Minecraft.getInstance().getConnection().levels()) {
-            registry.removePlusButton(WorldGenCategory.WORLD_IDENTIFIER_MAP.get(world));
-        }
     }
 
     @Override

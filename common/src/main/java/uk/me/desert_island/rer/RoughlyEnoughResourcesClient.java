@@ -37,10 +37,6 @@ public class RoughlyEnoughResourcesClient {
             FriendlyByteBuf buf = new FriendlyByteBuf(world_state_buf);
             ResourceLocation worldId = buf.readResourceLocation();
             ResourceKey<Level> world = ResourceKey.create(Registries.DIMENSION, worldId);
-            if (world == null) {
-                RERUtils.LOGGER.error("Found unregistered dimension type %s, do the server and client have the same dimensions?", worldId.toString());
-                return;
-            }
             ClientWorldGenState state = ClientWorldGenState.byWorld(world);
             state.fromNetwork(buf);
             RERUtils.LOGGER.debug("Received data for " + worldId);

@@ -1,5 +1,7 @@
 package uk.me.desert_island.rer.rei_stuff;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import java.util.List;
 import me.shedaniel.clothconfig2.api.ScissorsHandler;
 import me.shedaniel.math.Point;
 import me.shedaniel.math.Rectangle;
@@ -56,8 +58,13 @@ public class EntityLootCategory extends LootCategory {
             return;
         }
 
+        if (Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity) == null) {
+            RERUtils.LOGGER.warn("can't create a %s entity, render is null", entityLootDisplay.getInputEntity());
+            return;
+        }
+
         widgets.add(Widgets.createSlotBase(entityBounds));
-        widgets.add(Widgets.createDrawableWidget((helper, matrices, mouseX, mouseY, delta) -> {
+        widgets.add(Widgets.createDrawableWidget((graphics, mouseX, mouseY, delta) -> {
             ScissorsHandler.INSTANCE.scissor(new Rectangle(entityBounds.x + 1, entityBounds.y + 1, entityBounds.width - 2, entityBounds.height - 2));
             float f = (float) Math.atan((entityBounds.getCenterX() - mouseX) / 40.0F);
             float g = (float) Math.atan((entityBounds.getCenterY() - mouseY) / 40.0F);
@@ -66,6 +73,7 @@ public class EntityLootCategory extends LootCategory {
                 size /= Math.max(entity.getBbWidth(), entity.getBbHeight());
             }
 
+            PoseStack matrices = graphics.pose();
             matrices.pushPose();
             matrices.translate(entityBounds.getCenterX(), entityBounds.getCenterY() + 20, 1050.0);
             matrices.scale(1, 1, -1);

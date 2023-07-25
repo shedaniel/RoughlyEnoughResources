@@ -22,6 +22,7 @@ import me.shedaniel.rei.impl.client.gui.widget.EntryWidget;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -106,20 +107,21 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
         }
 
         @Override
-        protected void drawCurrentEntry(PoseStack matrices, int mouseX, int mouseY, float delta) {
+        protected void drawCurrentEntry(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+            PoseStack matrices = graphics.pose();
+            matrices.pushPose();
+            matrices.translate(0, 0, 100);
             EntryStack<?> entry = getCurrentEntry();
-            entry.setZ(100);
             Rectangle innerBounds = getInnerBounds();
-            entry.render(matrices, innerBounds, mouseX, mouseY, delta);
+            entry.render(graphics, innerBounds, mouseX, mouseY, delta);
             if (stacks.isEmpty())
                 return;
             @SuppressWarnings("IntegerDivisionInFloatingPointContext")
             EntryStack<?> stack = stacks.get(stacks.size() == 1 ? 0 : Mth.floor((System.currentTimeMillis() / 500 % (double) stacks.size())));
             ItemStack itemStack = stack.castValue();
             int count = itemStack.getCount();
-            matrices.pushPose();
             String string = String.valueOf(count);
-            matrices.translate(0.0D, 0.0D, getZ() + 400.0F);
+            matrices.translate(0.0D, 0.0D, 400.0F);
             MultiBufferSource.BufferSource immediate = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
             font.drawInBatch(string, (float) (innerBounds.x + 19 - 2 - font.width(string)), (float) (innerBounds.y + 6 + 3), 16777215, true, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880, false);
             immediate.endBatch();
@@ -211,7 +213,7 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
         }
 
         @Override
-        public void render(PoseStack matrices, int mouseX, int mouseY, float delta) {
+        public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
             updatePosition(delta);
             Rectangle innerBounds = new Rectangle(bounds.x + 1, bounds.y + 1, bounds.width - 7, bounds.height - 2);
             ScissorsHandler.INSTANCE.scissor(innerBounds);
@@ -223,7 +225,7 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
                         break;
                     EntryWidget widget = widgets.get(index);
                     widget.getBounds().setLocation(bounds.x + 1 + x * 18, (int) (bounds.y + 1 + y * 18 - scroll));
-                    ((Widget) widget).render(matrices, mouseX, mouseY, delta);
+                    ((Widget) widget).render(graphics, mouseX, mouseY, delta);
                 }
             }
             ScissorsHandler.INSTANCE.removeLastScissor();
