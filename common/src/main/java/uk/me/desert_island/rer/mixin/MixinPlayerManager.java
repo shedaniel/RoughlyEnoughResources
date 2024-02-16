@@ -5,6 +5,7 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,7 +20,7 @@ import java.util.Collections;
 @Mixin(PlayerList.class)
 public class MixinPlayerManager {
     @Inject(method = "placeNewPlayer", at = @At(value = "RETURN"))
-    private void onPlayerConnect(Connection connection, ServerPlayer player, CallbackInfo ci) {
+    private void onPlayerConnect(Connection connection, ServerPlayer player, CommonListenerCookie commonListenerCookie, CallbackInfo ci) {
         for (ResourceKey<Level> world : WorldGenState.persistentStateManagerMap.keySet()) {
             WorldGenState state = WorldGenState.byWorld(world);
             state.sendToPlayers(Collections.singletonList(player), state.toNetwork(false, new FriendlyByteBuf(Unpooled.buffer()), state.buildEverythingLevels()), world);

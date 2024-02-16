@@ -165,9 +165,9 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
         }
 
         @Override
-        public boolean mouseScrolled(double double_1, double double_2, double double_3) {
-            if (containsMouse(double_1, double_2)) {
-                offset(ClothConfigInitializer.getScrollStep() * -double_3, true);
+        public boolean mouseScrolled(double mouseX, double mouseY, double amountX, double amountY) {
+            if (containsMouse(mouseX, mouseY)) {
+                offset(ClothConfigInitializer.getScrollStep() * -amountY, true);
                 return true;
             }
             return false;

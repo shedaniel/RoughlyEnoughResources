@@ -2,6 +2,7 @@ package uk.me.desert_island.rer;
 
 import com.google.common.collect.Lists;
 import com.google.gson.*;
+import com.mojang.serialization.JsonOps;
 import dev.architectury.networking.NetworkManager;
 import dev.architectury.utils.GameInstance;
 import io.netty.buffer.Unpooled;
@@ -9,7 +10,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.storage.loot.Deserializers;
 import net.minecraft.world.level.storage.loot.LootDataManager;
 import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -20,8 +20,6 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.*;
 public class RoughlyEnoughResources {
-    public static final Gson GSON = Deserializers.createLootTableSerializer().create();
-
     public static final ResourceLocation SEND_WORLD_GEN_STATE_START = new ResourceLocation("roughlyenoughresources", "swds_start");
     public static final ResourceLocation SEND_WORLD_GEN_STATE_CHUNK = new ResourceLocation("roughlyenoughresources", "swds_chunk");
     public static final ResourceLocation SEND_WORLD_GEN_STATE_DONE = new ResourceLocation("roughlyenoughresources", "swds_done");
@@ -50,7 +48,8 @@ public class RoughlyEnoughResources {
                 ResourceLocation identifier = names.get(j);
                 LootTable table = lootManager.getLootTable(identifier);
                 writeIdentifier(buf, identifier);
-                writeJson(buf, optimiseTable(GSON.toJsonTree(table)));
+                writeJson(buf, optimiseTable(LootTable.CODEC.encodeStart(JsonOps.INSTANCE, table)
+                        .getOrThrow(false, error -> RERUtils.LOGGER.warn("Failed to serialize loot table '%s': ", identifier, error))));
             }
             for (ServerPlayer player : players) {
                 NetworkManager.sendToPlayer(player, RoughlyEnoughResources.SEND_LOOT_INFO, new FriendlyByteBuf(buf.duplicate()));
