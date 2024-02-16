@@ -27,6 +27,7 @@ import net.minecraft.util.GsonHelper;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SmeltingRecipe;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -424,7 +425,7 @@ public abstract class LootDisplay implements Display {
         if (stack.isEmpty() || stack.getType() != VanillaEntryTypes.ITEM)
             return stack.copy();
         ClientLevel world = Minecraft.getInstance().level;
-        Optional<SmeltingRecipe> optional = Minecraft.getInstance().getConnection().getRecipeManager().getRecipeFor(RecipeType.SMELTING, new SimpleContainer(stack.<ItemStack>castValue()), world);
+        Optional<SmeltingRecipe> optional = Minecraft.getInstance().getConnection().getRecipeManager().getRecipeFor(RecipeType.SMELTING, new SimpleContainer(stack.<ItemStack>castValue()), world).map(RecipeHolder::value);
         if (optional.isPresent()) {
             ItemStack itemStack = optional.get().getResultItem(world.registryAccess());
             if (!itemStack.isEmpty()) {

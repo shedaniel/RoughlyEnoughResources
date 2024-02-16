@@ -135,13 +135,13 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
             }
 
             @Override
-            public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+            public boolean mouseScrolled(double mouseX, double mouseY, double amountX, double amountY) {
                 double mouseH = mouseX - startPoint.x;
                 if (bounds.contains(mouseX, mouseY) && mouseH >= 0 && mouseH < 128 && mouseY < bounds.y + 64) {
-                    scroll.setTo(Doubles.constrainToRange(scroll.target() + amount * -20, -100, WORLD_HEIGHT - 128 + 100), 200);
+                    scroll.setTo(Doubles.constrainToRange(scroll.target() + amountY * -20, -100, WORLD_HEIGHT - 128 + 100), 200);
                     return true;
                 }
-                return super.mouseScrolled(mouseX, mouseY, amount);
+                return super.mouseScrolled(mouseX, mouseY, amountX, amountY);
             }
         });
         widgets.add(Widgets.createDrawableWidget((graphics, mouseX, mouseY, delta) -> {

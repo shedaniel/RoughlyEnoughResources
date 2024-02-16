@@ -12,6 +12,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -55,7 +56,7 @@ public class WorldGenState extends SavedData {
     public static WorldGenState byWorld(ResourceKey<Level> world) {
         String name = "rer_worldgen";
         DimensionDataStorage psm = persistentStateManagerMap.get(world);
-        return psm.computeIfAbsent(nbt -> new WorldGenState(nbt, name, world), () -> new WorldGenState(null, name, world), name);
+        return psm.computeIfAbsent(new Factory<>(() -> new WorldGenState(null, name, world), nbt -> new WorldGenState(nbt, name, world), DataFixTypes.SAVED_DATA_MAP_DATA), name);
     }
 
     public void markPlayerDirty(Block block) {
