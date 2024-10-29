@@ -14,7 +14,7 @@ This mod extends Just Enough Items to show you at what heights in the world you 
 #logoFile = ""
 
 [[dependencies.roughlyenoughresources]]
-modId = "forge"
+modId = "neoforge"
 mandatory = true
 versionRange = "[47,)"
 ordering = "NONE"
