@@ -124,7 +124,7 @@ public class RERUtils {
         Item item = block.asItem();
 
         if (block instanceof LiquidBlock liquidBlock) {
-            return EntryStacks.of(liquidBlock.getFluidState(block.defaultBlockState()).getType());
+            return EntryStacks.of(liquidBlock.arch$getFluid().defaultFluidState().getType());
         }
 
         if (block == Blocks.FIRE) {

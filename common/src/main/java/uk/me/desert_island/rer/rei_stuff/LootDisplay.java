@@ -3,7 +3,6 @@ package uk.me.desert_island.rer.rei_stuff;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.architectury.platform.Platform;
 import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 import me.shedaniel.rei.api.common.display.Display;
@@ -19,20 +18,19 @@ import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraft.util.GsonHelper;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.item.crafting.SmeltingRecipe;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSet;
 import uk.me.desert_island.rer.RERUtils;
+import uk.me.desert_island.rer.RerDataComponents;
 import uk.me.desert_island.rer.client.ClientLootCache;
 
 import java.text.DecimalFormat;
@@ -121,7 +119,7 @@ public abstract class LootDisplay implements Display {
     }
 
     public List<LootOutput> munchLootEntryItemJson(JsonObject object) {
-        Item item = BuiltInRegistries.ITEM.get(new ResourceLocation(object.get("name").getAsString()));
+        Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(object.get("name").getAsString()));
         EntryStack<?> stack = EntryStacks.of(item);
         LootOutput output = new LootOutput();
         output.output = EntryIngredient.of(stack);
@@ -133,7 +131,8 @@ public abstract class LootDisplay implements Display {
 
     public void munchLootCondition(JsonElement conditionElement, List<LootOutput> outputs) {
         JsonObject conditionObject = conditionElement.getAsJsonObject();
-        String kind = new ResourceLocation(conditionObject.get("condition").getAsString()).toString();
+        String kind = ResourceLocation.parse(conditionObject.get("condition").getAsString()).toString();
+        ClientLevel clientLevel = Minecraft.getInstance().level;
 
         if (kind.equals("minecraft:inverted")) {
             for (LootOutput output : outputs) {
@@ -173,10 +172,10 @@ public abstract class LootDisplay implements Display {
             for (JsonElement enchantmentElement : conditionObject.get("predicate").getAsJsonObject().get("enchantments").getAsJsonArray()) {
                 JsonObject enchantmentObject = enchantmentElement.getAsJsonObject();
                 String enchantmentString = enchantmentObject.get("enchantment").getAsString();
-                Enchantment enchantment = BuiltInRegistries.ENCHANTMENT.get(new ResourceLocation(enchantmentString));
+                Enchantment enchantment = clientLevel.registryAccess().registryOrThrow(Registries.ENCHANTMENT).get(ResourceLocation.parse(enchantmentString));
                 if (enchantment != null) {
                     for (LootOutput output : outputs) {
-                        output.addExtraText(I18n.get("rer.condition.enchantment", I18n.get(enchantment.getDescriptionId()).toLowerCase()));
+                        output.addExtraText(I18n.get("rer.condition.enchantment", enchantment.description().getString().toLowerCase()));
                     }
                 }
             }
@@ -192,7 +191,7 @@ public abstract class LootDisplay implements Display {
             }
         } else if (kind.equals("minecraft:match_tool") && conditionObject.has("predicate") && conditionObject.get("predicate").getAsJsonObject().has("item")) {
             String itemId = conditionObject.get("predicate").getAsJsonObject().get("item").getAsString();
-            Item item = BuiltInRegistries.ITEM.get(new ResourceLocation(itemId));
+            Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(itemId));
             for (LootOutput output : outputs) {
                 output.addExtraText(I18n.get("rer.condition.item", item.getDescription().getString().toLowerCase()));
             }
@@ -207,7 +206,7 @@ public abstract class LootDisplay implements Display {
     }
 
     public List<LootOutput> munchLootEntryJson(JsonObject object) {
-        String type = new ResourceLocation(object.get("type").getAsString()).toString();
+        String type = ResourceLocation.parse(object.get("type").getAsString()).toString();
 
         List<LootOutput> outputs = new ArrayList<>();
         /* creeper_spawn_egg -> minecraft:tag */
@@ -223,12 +222,12 @@ public abstract class LootDisplay implements Display {
                 /* do nothing */
                 break;
             case "minecraft:loot_table":
-                JsonElement json = ClientLootCache.ID_TO_LOOT.get(new ResourceLocation(object.get("name").getAsString()));
+                JsonElement json = ClientLootCache.ID_TO_LOOT.get(ResourceLocation.parse(object.get("name").getAsString()));
                 if (json != null)
                     outputs.addAll(munchLootSupplierJson(json));
                 break;
             case "minecraft:tag":
-                TagKey<Item> tag = TagKey.create(Registries.ITEM, new ResourceLocation(object.get("name").getAsString()));
+                TagKey<Item> tag = TagKey.create(Registries.ITEM, ResourceLocation.parse(object.get("name").getAsString()));
                 if (tag != null)
                     outputs.addAll(StreamSupport.stream(BuiltInRegistries.ITEM.getTagOrEmpty(tag).spliterator(), false).map(Holder::value).map(item -> {
                         EntryStack<?> stack = EntryStacks.of(item);
@@ -273,7 +272,8 @@ public abstract class LootDisplay implements Display {
 
     private List<LootOutput> munchLootFunctions(JsonElement lootFunction, List<LootOutput> outputs) {
         JsonObject functionObject = lootFunction.getAsJsonObject();
-        String kind = new ResourceLocation(functionObject.get("function").getAsString()).toString();
+        String kind = ResourceLocation.parse(functionObject.get("function").getAsString()).toString();
+        ClientLevel clientLevel = Minecraft.getInstance().level;
 
         boolean createNew = false;
         List<LootOutput> newOutputs = null;
@@ -295,7 +295,7 @@ public abstract class LootDisplay implements Display {
                     output.setCountText(String.valueOf(count));
                 }
             } else if (countEl.isJsonObject()) {
-                String type = new ResourceLocation(countEl.getAsJsonObject().get("type").getAsString()).toString();
+                String type = ResourceLocation.parse(countEl.getAsJsonObject().get("type").getAsString()).toString();
                 if (type.equalsIgnoreCase("minecraft:uniform")) {
                     Integer min = tryGetNumber(countEl.getAsJsonObject(), "min");
                     Integer max = tryGetNumber(countEl.getAsJsonObject(), "max");
@@ -309,7 +309,7 @@ public abstract class LootDisplay implements Display {
                         for (int i = 0; i < no; i++) {
                             ItemStack value = newList.get(i).castValue();
                             value.setCount(min + i);
-                            value.getOrCreateTag().putInt("RER_COUNT", min + i);
+                            value.set(RerDataComponents.RER_COUNT, min + i);
                         }
                         output.output = EntryIngredient.of(newList);
                         if (min != null && max != null)
@@ -350,6 +350,8 @@ public abstract class LootDisplay implements Display {
         } else if (kind.equals("minecraft:copy_nbt") || kind.equals("minecraft:copy_name") || kind.equals("minecraft:explosion_decay") || kind.equals("minecraft:set_contents") || kind.equals("minecraft:copy_state")) {
             // Ignored
         } else if (kind.equals("minecraft:set_nbt") && functionObject.has("tag")) {
+            // FIXME - Ignored for now. Likely replaced by Components?
+            /*
             try {
                 CompoundTag tag = TagParser.parseTag(GsonHelper.getAsString(functionObject, "tag"));
                 for (LootOutput output : outputs) {
@@ -372,18 +374,21 @@ public abstract class LootDisplay implements Display {
             } catch (CommandSyntaxException e) {
                 e.printStackTrace();
             }
+            */
         } else if (kind.equals("minecraft:apply_bonus") && functionObject.has("enchantment")) {
             String enchantmentString = functionObject.get("enchantment").getAsString();
-            Enchantment enchantment = BuiltInRegistries.ENCHANTMENT.get(new ResourceLocation(enchantmentString));
+            // TODO - Requires registry access, double check it is fine to grab from client here
+            Enchantment enchantment = clientLevel.registryAccess().registryOrThrow(Registries.ENCHANTMENT).get(ResourceLocation.parse(enchantmentString));
             if (enchantment != null) {
                 for (LootOutput output : outputs) {
-                    output.addExtraTextCount(I18n.get("rer.function.bonus.enchant", I18n.get(enchantment.getDescriptionId()).toLowerCase()));
+                    output.addExtraTextCount(I18n.get("rer.function.bonus.enchant", enchantment.description().getString().toLowerCase()));
                 }
                 createNew = true;
             }
         } else if (kind.equals("minecraft:looting_enchant")) {
             for (LootOutput output : outputs) {
-                output.addExtraTextCount(I18n.get("rer.function.bonus.enchant", I18n.get(Enchantments.MOB_LOOTING.getDescriptionId()).toLowerCase()));
+
+                output.addExtraTextCount(I18n.get("rer.function.bonus.enchant", I18n.get(clientLevel.registryAccess().registryOrThrow(Registries.ENCHANTMENT).get(Enchantments.LOOTING).description().getString().toLowerCase())));
             }
             createNew = true;
         } else if (kind.equals("minecraft:furnace_smelt")) {
@@ -424,9 +429,9 @@ public abstract class LootDisplay implements Display {
         if (stack.isEmpty() || stack.getType() != VanillaEntryTypes.ITEM)
             return stack.copy();
         ClientLevel world = Minecraft.getInstance().level;
-        Optional<SmeltingRecipe> optional = Minecraft.getInstance().getConnection().getRecipeManager().getRecipeFor(RecipeType.SMELTING, new SimpleContainer(stack.<ItemStack>castValue()), world);
+        Optional<RecipeHolder<SmeltingRecipe>> optional = Minecraft.getInstance().getConnection().getRecipeManager().getRecipeFor(RecipeType.SMELTING, new SingleRecipeInput((ItemStack) (Object) stack.castValue()), world);
         if (optional.isPresent()) {
-            ItemStack itemStack = optional.get().getResultItem(world.registryAccess());
+            ItemStack itemStack = optional.get().value().getResultItem(world.registryAccess());
             if (!itemStack.isEmpty()) {
                 EntryStack<?> entryStack = EntryStacks.of(itemStack.copy());
                 entryStack.<ItemStack>castValue().setCount(stack.<ItemStack>castValue().getCount());

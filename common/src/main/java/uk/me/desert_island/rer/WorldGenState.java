@@ -5,19 +5,23 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,7 +59,11 @@ public class WorldGenState extends SavedData {
     public static WorldGenState byWorld(ResourceKey<Level> world) {
         String name = "rer_worldgen";
         DimensionDataStorage psm = persistentStateManagerMap.get(world);
-        return psm.computeIfAbsent(nbt -> new WorldGenState(nbt, name, world), () -> new WorldGenState(null, name, world), name);
+        return psm.computeIfAbsent(new SavedData.Factory<>(
+            () -> new WorldGenState(null, name, world),
+            (nbt, provider) -> new WorldGenState(nbt, name, world),
+            DataFixTypes.LEVEL // FIXME - Is this correct? Does this need a custom DataFixType?
+        ), name);
     }
 
     public void markPlayerDirty(Block block) {
@@ -77,12 +85,14 @@ public class WorldGenState extends SavedData {
         buf.writeBytes(infoBuf);
 
         ByteBuf start_bb = Unpooled.buffer().writeInt(buf.readableBytes());
-        FriendlyByteBuf start_packet = new FriendlyByteBuf(start_bb);
 
-        FriendlyByteBuf done_packet = new FriendlyByteBuf(Unpooled.buffer());
 
 
         for (ServerPlayer entity : player) {
+            // TODO - Refactor/optimize to actually hold registry access
+            RegistryFriendlyByteBuf start_packet = new RegistryFriendlyByteBuf(start_bb, entity.registryAccess());
+            RegistryFriendlyByteBuf done_packet = new RegistryFriendlyByteBuf(Unpooled.buffer(), entity.registryAccess());
+
             NetworkManager.sendToPlayer(entity, RoughlyEnoughResources.SEND_WORLD_GEN_STATE_START, start_packet);
 
             FriendlyByteBuf player_packet = new FriendlyByteBuf(buf.retainedDuplicate());
@@ -95,7 +105,7 @@ public class WorldGenState extends SavedData {
                 ByteBuf sub_bb = Unpooled.buffer(this_size);
                 player_packet.readBytes(sub_bb, this_size);
 
-                NetworkManager.sendToPlayer(entity, RoughlyEnoughResources.SEND_WORLD_GEN_STATE_CHUNK, new FriendlyByteBuf(sub_bb));
+                NetworkManager.sendToPlayer(entity, RoughlyEnoughResources.SEND_WORLD_GEN_STATE_CHUNK, new RegistryFriendlyByteBuf(sub_bb, entity.registryAccess()));
             }
             NetworkManager.sendToPlayer(entity, RoughlyEnoughResources.SEND_WORLD_GEN_STATE_DONE, done_packet);
         }
@@ -134,7 +144,7 @@ public class WorldGenState extends SavedData {
 
         CompoundTag levelCountsForBlock = root.getCompound("level_counts_for_block");
         for (String blockIdString : levelCountsForBlock.getAllKeys()) {
-            Block block = BuiltInRegistries.BLOCK.get(new ResourceLocation(blockIdString));
+            Block block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(blockIdString));
             levelCountsMap.put(block, new AtomicLongArray(WORLD_HEIGHT));
             AtomicLongArray levelCount = levelCountsMap.get(block);
             long[] countsForBlockTag = levelCountsForBlock.getLongArray(blockIdString);
@@ -145,7 +155,7 @@ public class WorldGenState extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag rootTag) {
+    public @NotNull CompoundTag save(CompoundTag rootTag, HolderLookup.Provider provider) {
         rootTag.putInt("Version", 0);
 
         long[] totalCountsAtLevelArray = new long[totalCountsAtLevelsMap.length()];
@@ -170,10 +180,9 @@ public class WorldGenState extends SavedData {
 
     private static void writeVarLongArray(FriendlyByteBuf buf, long[] array) {
         buf.writeVarInt(array.length);
-        int length = array.length;
 
-        for (int var4 = 0; var4 < length; ++var4) {
-            buf.writeVarLong(array[var4]);
+        for (long l : array) {
+            buf.writeVarLong(l);
         }
     }
 

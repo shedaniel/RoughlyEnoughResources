@@ -21,7 +21,7 @@ public class EntityLootDisplay extends LootDisplay {
     public EntityLootDisplay(EntityType<?> inputEntity) {
         this.inputEntity = inputEntity;
         this.inputStack = EntryStacks.of(Objects.requireNonNullElse(SpawnEggItem.byId(inputEntity), Items.AIR));
-        this.lootTableId = inputEntity.getDefaultLootTable();
+        this.lootTableId = inputEntity.getDefaultLootTable().location();
         this.contextType = LootContextParamSets.ENTITY;
     }
 

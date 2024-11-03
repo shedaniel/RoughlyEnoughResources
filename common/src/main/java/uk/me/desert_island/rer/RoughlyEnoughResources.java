@@ -5,13 +5,14 @@ import com.google.gson.*;
 import dev.architectury.networking.NetworkManager;
 import dev.architectury.utils.GameInstance;
 import io.netty.buffer.Unpooled;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.ReloadableServerRegistries;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.storage.loot.Deserializers;
-import net.minecraft.world.level.storage.loot.LootDataManager;
-import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.LootTable;
 import uk.me.desert_island.rer.mixin.IdentifierHooks;
 
@@ -20,13 +21,14 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.*;
 public class RoughlyEnoughResources {
-    public static final Gson GSON = Deserializers.createLootTableSerializer().create();
+    // FIXME - Requires special deserialization based off MC. Formerly Deserializers.createLootTableDeserializer()
+    public static final Gson GSON = new Gson();
 
-    public static final ResourceLocation SEND_WORLD_GEN_STATE_START = new ResourceLocation("roughlyenoughresources", "swds_start");
-    public static final ResourceLocation SEND_WORLD_GEN_STATE_CHUNK = new ResourceLocation("roughlyenoughresources", "swds_chunk");
-    public static final ResourceLocation SEND_WORLD_GEN_STATE_DONE = new ResourceLocation("roughlyenoughresources", "swds_done");
-    public static final ResourceLocation SEND_LOOT_INFO = new ResourceLocation("roughlyenoughresources", "sli");
-    public static final ResourceLocation ASK_SYNC_INFO = new ResourceLocation("roughlyenoughresources", "asi");
+    public static final ResourceLocation SEND_WORLD_GEN_STATE_START = ResourceLocation.fromNamespaceAndPath("roughlyenoughresources", "swds_start");
+    public static final ResourceLocation SEND_WORLD_GEN_STATE_CHUNK = ResourceLocation.fromNamespaceAndPath("roughlyenoughresources", "swds_chunk");
+    public static final ResourceLocation SEND_WORLD_GEN_STATE_DONE = ResourceLocation.fromNamespaceAndPath("roughlyenoughresources", "swds_done");
+    public static final ResourceLocation SEND_LOOT_INFO = ResourceLocation.fromNamespaceAndPath("roughlyenoughresources", "sli");
+    public static final ResourceLocation ASK_SYNC_INFO = ResourceLocation.fromNamespaceAndPath("roughlyenoughresources", "asi");
 
     public static final int MIN_WORLD_Y = -64;
     public static final int MAX_WORLD_Y = 320;
@@ -38,8 +40,8 @@ public class RoughlyEnoughResources {
     }
 
     public static void sendLootToPlayers(MinecraftServer server, List<ServerPlayer> players) {
-        LootDataManager lootManager = server.getLootData();
-        List<ResourceLocation> names = Lists.newArrayList(lootManager.getKeys(LootDataType.TABLE));
+        ReloadableServerRegistries.Holder lootManager = server.reloadableRegistries();
+        List<ResourceLocation> names = Lists.newArrayList(lootManager.getKeys(Registries.LOOT_TABLE));
 
         int size = 50;
         for (int i = 0; i < names.size(); i += size) {
@@ -48,12 +50,12 @@ public class RoughlyEnoughResources {
             buf.writeInt(end - i);
             for (int j = i; j < end; j++) {
                 ResourceLocation identifier = names.get(j);
-                LootTable table = lootManager.getLootTable(identifier);
+                LootTable table = lootManager.getLootTable(ResourceKey.create(Registries.LOOT_TABLE, identifier));
                 writeIdentifier(buf, identifier);
                 writeJson(buf, optimiseTable(GSON.toJsonTree(table)));
             }
             for (ServerPlayer player : players) {
-                NetworkManager.sendToPlayer(player, RoughlyEnoughResources.SEND_LOOT_INFO, new FriendlyByteBuf(buf.duplicate()));
+                NetworkManager.sendToPlayer(player, RoughlyEnoughResources.SEND_LOOT_INFO, new RegistryFriendlyByteBuf(buf.duplicate(), player.registryAccess()));
             }
         }
     }

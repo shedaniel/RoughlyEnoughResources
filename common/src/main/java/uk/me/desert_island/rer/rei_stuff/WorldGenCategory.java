@@ -25,6 +25,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import org.apache.commons.lang3.StringUtils;
@@ -51,11 +52,12 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
     public WorldGenCategory(ResourceKey<Level> world) {
         WORLD_IDENTIFIER_MAP.put(world, CategoryIdentifier.of("roughlyenoughresources", world.location().getPath() + "_worldgen_category"));
         this.world = world;
-        ClientGuiEvent.RENDER_POST.register((screen, matrices, mouseX, mouseY, delta) -> {
+        ClientGuiEvent.RENDER_POST.register((screen, matrices, mouseX, mouseY, deltaTracker) -> {
+            double delta = deltaTracker.getGameTimeDeltaTicks();
             if (scroll.target() < 0) {
-                scroll.setTarget(scroll.target() - scroll.target() * (1.0D - 0.34) * (double) delta / 3.0D);
+                scroll.setTarget(scroll.target() - scroll.target() * (1.0D - 0.34) * delta / 3.0D);
             } else if (scroll.target() > WORLD_HEIGHT - 128) {
-                scroll.setTarget((scroll.target() - (WORLD_HEIGHT - 128)) * (1.0D - (1.0D - 0.34) * (double) delta / 3.0D) + WORLD_HEIGHT - 128);
+                scroll.setTarget((scroll.target() - (WORLD_HEIGHT - 128)) * (1.0D - (1.0D - 0.34) * delta / 3.0D) + WORLD_HEIGHT - 128);
             }
 
             scroll.update(delta);
@@ -98,7 +100,8 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
                 EntryStack<?> current = getCurrent();
                 Rectangle innerBounds = new Rectangle(rectangle.x + rectangle.width / 2 - 8, rectangle.y + 3, 16, 16);
                 current.render(graphics, innerBounds, mouseX, mouseY, delta);
-                tooltip[0] = innerBounds.contains(mouseX, mouseY) ? current.getTooltip(TooltipContext.of(new Point(mouseX, mouseY))) : null;
+                // TODO - Review: infer Item Tooltip context from somewhere?
+                tooltip[0] = innerBounds.contains(mouseX, mouseY) ? current.getTooltip(TooltipContext.of(new Point(mouseX, mouseY), Item.TooltipContext.EMPTY)) : null;
             }
         };
     }
@@ -134,14 +137,15 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
                 return Collections.emptyList();
             }
 
+            // TODO - review whether these values are correct
             @Override
-            public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+            public boolean mouseScrolled(double mouseX, double mouseY, double amount, double double_4) {
                 double mouseH = mouseX - startPoint.x;
                 if (bounds.contains(mouseX, mouseY) && mouseH >= 0 && mouseH < 128 && mouseY < bounds.y + 64) {
                     scroll.setTo(Doubles.constrainToRange(scroll.target() + amount * -20, -100, WORLD_HEIGHT - 128 + 100), 200);
                     return true;
                 }
-                return super.mouseScrolled(mouseX, mouseY, amount);
+                return super.mouseScrolled(mouseX, mouseY, amount, double_4);
             }
         });
         widgets.add(Widgets.createDrawableWidget((graphics, mouseX, mouseY, delta) -> {
