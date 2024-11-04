@@ -1,6 +1,5 @@
 package uk.me.desert_island.rer;
 
-import com.google.gson.JsonElement;
 import dev.architectury.networking.NetworkManager;
 import io.netty.buffer.CompositeByteBuf;
 import net.fabricmc.api.EnvType;
@@ -12,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import uk.me.desert_island.rer.client.ClientLootCache;
 import uk.me.desert_island.rer.client.ClientWorldGenState;
+import uk.me.desert_island.rer.networking.LootTableSyncS2CPacket;
 
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static uk.me.desert_island.rer.RoughlyEnoughResources.*;
@@ -42,14 +42,10 @@ public class RoughlyEnoughResourcesClient {
             RERUtils.LOGGER.debug("Received data for " + worldId);
         });
 
-        NetworkManager.registerReceiver(NetworkManager.s2c(), SEND_LOOT_INFO, (buf, context) -> {
-            int size = buf.readInt();
+        NetworkManager.registerReceiver(NetworkManager.s2c(), LootTableSyncS2CPacket.TYPE, LootTableSyncS2CPacket.CODEC, (packet, context) -> {
+            int size = packet.lootJson().size();
             RERUtils.LOGGER.debug("Received %d Loot Info", size);
-            for (int i = 0; i < size; i++) {
-                ResourceLocation identifier = buf.readResourceLocation();
-                JsonElement json = RoughlyEnoughResources.readJson(buf);
-                ClientLootCache.ID_TO_LOOT.put(identifier, json);
-            }
+            ClientLootCache.ID_TO_LOOT.putAll(packet.lootJson());
         });
     }
 }

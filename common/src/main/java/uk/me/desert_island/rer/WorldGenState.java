@@ -81,7 +81,7 @@ public class WorldGenState extends SavedData {
 
     public void sendToPlayers(Iterable<ServerPlayer> player, FriendlyByteBuf infoBuf, ResourceKey<Level> world) {
         FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        RoughlyEnoughResources.writeIdentifier(buf, world.location());
+        RerJsonUtils.writeIdentifier(buf, world.location());
         buf.writeBytes(infoBuf);
 
         ByteBuf start_bb = Unpooled.buffer().writeInt(buf.readableBytes());
