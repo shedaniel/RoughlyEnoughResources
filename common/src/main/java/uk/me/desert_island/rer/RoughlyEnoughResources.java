@@ -2,6 +2,7 @@ package uk.me.desert_island.rer;
 
 import com.google.common.collect.Lists;
 import com.google.gson.*;
+import com.mojang.serialization.JsonOps;
 import dev.architectury.networking.NetworkManager;
 import dev.architectury.utils.GameInstance;
 import io.netty.buffer.Unpooled;
@@ -13,17 +14,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ReloadableServerRegistries;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.LootTable;
 import uk.me.desert_island.rer.mixin.IdentifierHooks;
-
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.math.MathContext;
+import java.math.*;
 import java.util.*;
-public class RoughlyEnoughResources {
-    // FIXME - Requires special deserialization based off MC. Formerly Deserializers.createLootTableDeserializer()
-    public static final Gson GSON = new Gson();
 
+public class RoughlyEnoughResources {
     public static final ResourceLocation SEND_WORLD_GEN_STATE_START = ResourceLocation.fromNamespaceAndPath("roughlyenoughresources", "swds_start");
     public static final ResourceLocation SEND_WORLD_GEN_STATE_CHUNK = ResourceLocation.fromNamespaceAndPath("roughlyenoughresources", "swds_chunk");
     public static final ResourceLocation SEND_WORLD_GEN_STATE_DONE = ResourceLocation.fromNamespaceAndPath("roughlyenoughresources", "swds_done");
@@ -41,7 +38,7 @@ public class RoughlyEnoughResources {
 
     public static void sendLootToPlayers(MinecraftServer server, List<ServerPlayer> players) {
         ReloadableServerRegistries.Holder lootManager = server.reloadableRegistries();
-        List<ResourceLocation> names = Lists.newArrayList(lootManager.getKeys(Registries.LOOT_TABLE));
+        List<ResourceLocation> names = Lists.newArrayList(lootManager.getKeys(LootDataType.TABLE.registryKey()));
 
         int size = 50;
         for (int i = 0; i < names.size(); i += size) {
@@ -52,7 +49,10 @@ public class RoughlyEnoughResources {
                 ResourceLocation identifier = names.get(j);
                 LootTable table = lootManager.getLootTable(ResourceKey.create(Registries.LOOT_TABLE, identifier));
                 writeIdentifier(buf, identifier);
-                writeJson(buf, optimiseTable(GSON.toJsonTree(table)));
+                var lootJson = JsonOps.INSTANCE.withEncoder(LootTable.DIRECT_CODEC).apply(table);
+                if (lootJson.isSuccess()) {
+                    writeJson(buf, optimiseTable(lootJson.getOrThrow()));
+                }
             }
             for (ServerPlayer player : players) {
                 NetworkManager.sendToPlayer(player, RoughlyEnoughResources.SEND_LOOT_INFO, new RegistryFriendlyByteBuf(buf.duplicate(), player.registryAccess()));
