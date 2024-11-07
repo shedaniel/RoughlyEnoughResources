@@ -28,7 +28,9 @@ public class RoughlyEnoughResources {
     public static void onInitialize() {
         RerDataComponents.init();
         RERUtils.LOGGER.info("RoughlyEnoughPacketSize?  Possibly.");
-        NetworkManager.registerReceiver(NetworkManager.c2s(), ASK_SYNC_INFO, (buf, context) -> context.queue(() -> sendLootToPlayers(GameInstance.getServer(), Collections.singletonList((ServerPlayer) context.getPlayer()))));
+        NetworkManager.registerReceiver(NetworkManager.c2s(), RequestLootSynqC2SPacket.TYPE, RequestLootSynqC2SPacket.CODEC, (packet, context) -> {
+            context.queue(() -> sendLootToPlayers(GameInstance.getServer(), Collections.singletonList((ServerPlayer) context.getPlayer())));
+        });
     }
 
     public static void sendLootToPlayers(MinecraftServer server, List<ServerPlayer> players) {
