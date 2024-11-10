@@ -11,7 +11,7 @@ import net.minecraft.server.ReloadableServerRegistries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.LootTable;
-import uk.me.desert_island.rer.networking.LootTableSyncS2CPacket;
+import uk.me.desert_island.rer.networking.*;
 import java.util.*;
 
 public class RoughlyEnoughResources {
