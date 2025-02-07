@@ -2,7 +2,6 @@ package uk.me.desert_island.rer.rei_stuff;
 
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Doubles;
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.architectury.event.events.client.ClientGuiEvent;
 import me.shedaniel.clothconfig2.api.ScissorsHandler;
 import me.shedaniel.clothconfig2.api.animator.ValueAnimator;
@@ -20,12 +19,13 @@ import me.shedaniel.rei.api.common.util.EntryStacks;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import org.apache.commons.lang3.StringUtils;
@@ -52,11 +52,12 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
     public WorldGenCategory(ResourceKey<Level> world) {
         WORLD_IDENTIFIER_MAP.put(world, CategoryIdentifier.of("roughlyenoughresources", world.location().getPath() + "_worldgen_category"));
         this.world = world;
-        ClientGuiEvent.RENDER_POST.register((screen, matrices, mouseX, mouseY, delta) -> {
+        ClientGuiEvent.RENDER_POST.register((screen, matrices, mouseX, mouseY, deltaTracker) -> {
+            double delta = deltaTracker.getGameTimeDeltaTicks();
             if (scroll.target() < 0) {
-                scroll.setTarget(scroll.target() - scroll.target() * (1.0D - 0.34) * (double) delta / 3.0D);
+                scroll.setTarget(scroll.target() - scroll.target() * (1.0D - 0.34) * delta / 3.0D);
             } else if (scroll.target() > WORLD_HEIGHT - 128) {
-                scroll.setTarget((scroll.target() - (WORLD_HEIGHT - 128)) * (1.0D - (1.0D - 0.34) * (double) delta / 3.0D) + WORLD_HEIGHT - 128);
+                scroll.setTarget((scroll.target() - (WORLD_HEIGHT - 128)) * (1.0D - (1.0D - 0.34) * delta / 3.0D) + WORLD_HEIGHT - 128);
             }
 
             scroll.update(delta);
@@ -95,11 +96,12 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
             }
 
             @Override
-            public void render(PoseStack matrices, Rectangle rectangle, int mouseX, int mouseY, float delta) {
+            public void render(GuiGraphics graphics, Rectangle rectangle, int mouseX, int mouseY, float delta) {
                 EntryStack<?> current = getCurrent();
                 Rectangle innerBounds = new Rectangle(rectangle.x + rectangle.width / 2 - 8, rectangle.y + 3, 16, 16);
-                current.render(matrices, innerBounds, mouseX, mouseY, delta);
-                tooltip[0] = innerBounds.contains(mouseX, mouseY) ? current.getTooltip(TooltipContext.of(new Point(mouseX, mouseY))) : null;
+                current.render(graphics, innerBounds, mouseX, mouseY, delta);
+                // TODO - Review: infer Item Tooltip context from somewhere?
+                tooltip[0] = innerBounds.contains(mouseX, mouseY) ? current.getTooltip(TooltipContext.of(new Point(mouseX, mouseY), Item.TooltipContext.EMPTY)) : null;
             }
         };
     }
@@ -127,7 +129,7 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
         widgets.add(Widgets.createSlotBase(new Rectangle(bounds.x + 1, bounds.y + 2, 130, 62)));
         widgets.add(new Widget() {
             @Override
-            public void render(PoseStack matrices, int mouseX, int mouseY, float delta) {
+            public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
             }
 
             @Override
@@ -135,17 +137,18 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
                 return Collections.emptyList();
             }
 
+            // TODO - review whether these values are correct
             @Override
-            public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+            public boolean mouseScrolled(double mouseX, double mouseY, double amount, double double_4) {
                 double mouseH = mouseX - startPoint.x;
                 if (bounds.contains(mouseX, mouseY) && mouseH >= 0 && mouseH < 128 && mouseY < bounds.y + 64) {
                     scroll.setTo(Doubles.constrainToRange(scroll.target() + amount * -20, -100, WORLD_HEIGHT - 128 + 100), 200);
                     return true;
                 }
-                return super.mouseScrolled(mouseX, mouseY, amount);
+                return super.mouseScrolled(mouseX, mouseY, amount, double_4);
             }
         });
-        widgets.add(Widgets.createDrawableWidget((helper, matrices, mouseX, mouseY, delta) -> {
+        widgets.add(Widgets.createDrawableWidget((graphics, mouseX, mouseY, delta) -> {
             ClientWorldGenState worldGenState = ClientWorldGenState.byWorld(display.getWorld());
 
             int graphHeight = 60;
@@ -166,7 +169,7 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
                     relPortion = portion / maxPortion;
                 }
 
-                GuiComponent.fill(matrices,
+                graphics.fill(
                         /*startx*/ startPoint.x + height,
                         /*starty*/ startPoint.y + (int) (graphHeight * (1 - relPortion)),
                         /*endx  */ startPoint.x + height + 1,
@@ -179,14 +182,14 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
             for (int y = Math.max(MIN_WORLD_Y, -60) - 30 * 5; y < MAX_WORLD_Y + 30 * 5; y += 30) {
                 int yOffseted = y - (int) Math.round(scroll.value()) - MIN_WORLD_Y;
                 if (yOffseted >= 0 && yOffseted < 128) {
-                    GuiComponent.fill(matrices,
+                    graphics.fill(
                             /*startx*/ startPoint.x + yOffseted,
                             /*starty*/ startPoint.y,
                             /*endx  */ startPoint.x + yOffseted + 1,
                             /*endy  */ startPoint.y + graphHeight,
                             /*color */ 0xff444444);
                 }
-                Minecraft.getInstance().font.draw(matrices, y + "", startPoint.x + yOffseted + 2, startPoint.y + 2, 0xff444444);
+                graphics.drawString(Minecraft.getInstance().font, String.valueOf(y), startPoint.x + yOffseted + 2, startPoint.y + 2, 0xff444444, false);
             }
 
             ScissorsHandler.INSTANCE.removeLastScissor();
@@ -199,13 +202,13 @@ public class WorldGenCategory implements DisplayCategory<WorldGenDisplay> {
                 } else {
                     rel_portion = portion / maxPortion;
                 }
-                GuiComponent.fill(matrices,
+                graphics.fill(
                         /*startx*/ mouseX,
                         /*starty*/ startPoint.y,
                         /*endx  */ mouseX + 1,
                         /*endy  */ startPoint.y + graphHeight,
                         /*color */ 0xffebd534);
-                GuiComponent.fill(matrices,
+                graphics.fill(
                         /*startx*/ startPoint.x,
                         /*starty*/ startPoint.y + Math.min((int) (graphHeight * (1 - rel_portion)), graphHeight - 1),
                         /*endx  */ startPoint.x + 128,

@@ -21,6 +21,9 @@ import me.shedaniel.rei.api.common.util.EntryStacks;
 import me.shedaniel.rei.impl.client.gui.widget.EntryWidget;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -105,22 +108,24 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
         }
 
         @Override
-        protected void drawCurrentEntry(PoseStack matrices, int mouseX, int mouseY, float delta) {
+        protected void drawCurrentEntry(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+            PoseStack matrices = graphics.pose();
+            matrices.pushPose();
+            matrices.translate(0, 0, 100);
             EntryStack<?> entry = getCurrentEntry();
-            entry.setZ(100);
             Rectangle innerBounds = getInnerBounds();
-            entry.render(matrices, innerBounds, mouseX, mouseY, delta);
+            entry.render(graphics, innerBounds, mouseX, mouseY, delta);
             if (stacks.isEmpty())
                 return;
             @SuppressWarnings("IntegerDivisionInFloatingPointContext")
             EntryStack<?> stack = stacks.get(stacks.size() == 1 ? 0 : Mth.floor((System.currentTimeMillis() / 500 % (double) stacks.size())));
             ItemStack itemStack = stack.castValue();
             int count = itemStack.getCount();
-            matrices.pushPose();
             String string = String.valueOf(count);
-            matrices.translate(0.0D, 0.0D, getZ() + 400.0F);
-            MultiBufferSource.BufferSource immediate = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
-            font.drawInBatch(string, (float) (innerBounds.x + 19 - 2 - font.width(string)), (float) (innerBounds.y + 6 + 3), 16777215, true, matrices.last().pose(), immediate, false, 0, 15728880);
+            matrices.translate(0.0D, 0.0D, 400.0F);
+            // TODO - Review: should this be using the client buffer source?
+            MultiBufferSource.BufferSource immediate = Minecraft.getInstance().renderBuffers().bufferSource();
+            font.drawInBatch(string, (float) (innerBounds.x + 19 - 2 - font.width(string)), (float) (innerBounds.y + 6 + 3), 16777215, true, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880, false);
             immediate.endBatch();
             matrices.popPose();
         }
@@ -161,8 +166,9 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
             this.widgets = Lists.newArrayList(widgets);
         }
 
+        // TODO - Review that the scroll values are correct
         @Override
-        public boolean mouseScrolled(double double_1, double double_2, double double_3) {
+        public boolean mouseScrolled(double double_1, double double_2, double double_3, double double_4) {
             if (containsMouse(double_1, double_2)) {
                 offset(ClothConfigInitializer.getScrollStep() * -double_3, true);
                 return true;
@@ -210,7 +216,7 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
         }
 
         @Override
-        public void render(PoseStack matrices, int mouseX, int mouseY, float delta) {
+        public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
             updatePosition(delta);
             Rectangle innerBounds = new Rectangle(bounds.x + 1, bounds.y + 1, bounds.width - 7, bounds.height - 2);
             ScissorsHandler.INSTANCE.scissor(innerBounds);
@@ -222,16 +228,14 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
                         break;
                     EntryWidget widget = widgets.get(index);
                     widget.getBounds().setLocation(bounds.x + 1 + x * 18, (int) (bounds.y + 1 + y * 18 - scroll));
-                    ((Widget) widget).render(matrices, mouseX, mouseY, delta);
+                    ((Widget) widget).render(graphics, mouseX, mouseY, delta);
                 }
             }
             ScissorsHandler.INSTANCE.removeLastScissor();
             ScissorsHandler.INSTANCE.scissor(bounds);
             RenderSystem.enableBlend();
             RenderSystem.blendFuncSeparate(770, 771, 0, 1);
-            RenderSystem.disableTexture();
             renderScrollBar();
-            RenderSystem.enableTexture();
             RenderSystem.disableBlend();
             ScissorsHandler.INSTANCE.removeLastScissor();
         }
@@ -241,7 +245,7 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
             int scrollbarPositionMinX = getBounds().getMaxX() - 7;
             int scrollbarPositionMaxX = scrollbarPositionMinX + 6;
             Tesselator tessellator = Tesselator.getInstance();
-            BufferBuilder buffer = tessellator.getBuilder();
+            BufferBuilder buffer = tessellator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
             if (maxScroll > 0) {
                 int height = (int) (((this.getBounds().height - 2f) * (this.getBounds().height - 2f)) / this.getMaxScrollPosition());
                 height = Mth.clamp(height, 32, this.getBounds().height - 2);
@@ -256,24 +260,23 @@ public class LootCategory implements DisplayCategory<LootDisplay> {
                 RenderSystem.setShader(GameRenderer::getPositionColorShader);
 
                 // Black Bar
-                buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-                buffer.vertex(scrollbarPositionMinX, this.getBounds().y + 1, 0.0D).color(0, 0, 0, 255).endVertex();
-                buffer.vertex(scrollbarPositionMaxX, this.getBounds().y + 1, 0.0D).color(0, 0, 0, 255).endVertex();
-                buffer.vertex(scrollbarPositionMaxX, getBounds().getMaxY() - 1, 0.0D).color(0, 0, 0, 255).endVertex();
-                buffer.vertex(scrollbarPositionMinX, getBounds().getMaxY() - 1, 0.0D).color(0, 0, 0, 255).endVertex();
+                buffer.addVertex(scrollbarPositionMinX, this.getBounds().y + 1, 0.0F).setColor(0, 0, 0, 255);
+                buffer.addVertex(scrollbarPositionMaxX, this.getBounds().y + 1, 0.0F).setColor(0, 0, 0, 255);
+                buffer.addVertex(scrollbarPositionMaxX, getBounds().getMaxY() - 1, 0.0F).setColor(0, 0, 0, 255);
+                buffer.addVertex(scrollbarPositionMinX, getBounds().getMaxY() - 1, 0.0F).setColor(0, 0, 0, 255);
 
                 // Bottom
-                buffer.vertex(scrollbarPositionMinX, minY + height, 0.0D).color(bottomC, bottomC, bottomC, 255).endVertex();
-                buffer.vertex(scrollbarPositionMaxX, minY + height, 0.0D).color(bottomC, bottomC, bottomC, 255).endVertex();
-                buffer.vertex(scrollbarPositionMaxX, minY, 0.0D).color(bottomC, bottomC, bottomC, 255).endVertex();
-                buffer.vertex(scrollbarPositionMinX, minY, 0.0D).color(bottomC, bottomC, bottomC, 255).endVertex();
+                buffer.addVertex(scrollbarPositionMinX, minY + height, 0.0F).setColor(bottomC, bottomC, bottomC, 255);
+                buffer.addVertex(scrollbarPositionMaxX, minY + height, 0.0F).setColor(bottomC, bottomC, bottomC, 255);
+                buffer.addVertex(scrollbarPositionMaxX, minY, 0.0F).setColor(bottomC, bottomC, bottomC, 255);
+                buffer.addVertex(scrollbarPositionMinX, minY, 0.0F).setColor(bottomC, bottomC, bottomC, 255);
 
                 // Top
-                buffer.vertex(scrollbarPositionMinX, (minY + height - 1), 0.0D).color(topC, topC, topC, 255).endVertex();
-                buffer.vertex((scrollbarPositionMaxX - 1), (minY + height - 1), 0.0D).color(topC, topC, topC, 255).endVertex();
-                buffer.vertex((scrollbarPositionMaxX - 1), minY, 0.0D).color(topC, topC, topC, 255).endVertex();
-                buffer.vertex(scrollbarPositionMinX, minY, 0.0D).color(topC, topC, topC, 255).endVertex();
-                tessellator.end();
+                buffer.addVertex(scrollbarPositionMinX, (minY + height - 1), 0.0F).setColor(topC, topC, topC, 255);
+                buffer.addVertex((scrollbarPositionMaxX - 1), (minY + height - 1), 0.0F).setColor(topC, topC, topC, 255);
+                buffer.addVertex((scrollbarPositionMaxX - 1), minY, 0.0F).setColor(topC, topC, topC, 255);
+                buffer.addVertex(scrollbarPositionMinX, minY, 0.0F).setColor(topC, topC, topC, 255);
+                buffer.build();
             }
         }
 

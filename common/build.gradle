@@ -9,8 +9,10 @@ dependencies {
     modCompileOnly "me.shedaniel.cloth:cloth-config:$cloth_config_version"
 }
 
+var platforms = "fabric,neoforge"
+
 architectury {
-    common()
+    common(platforms.split(","))
 }
 
 publishing {

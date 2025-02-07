@@ -11,7 +11,7 @@
   ],
   "contact": {
     "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/theorbtwo/RoughlyEnoughResources"
+    "sources": "https://github.com/shedaniel/RoughlyEnoughResources"
   },
   
   "license": "CC0-1.0",
@@ -37,6 +37,6 @@
     "fabricloader": ">=0.4.0",
     "fabric": "*",
     "roughlyenoughitems": "*",
-    "cloth-config2": ">=6.2"
+    "cloth-config2": ">=11.0"
   }
 }

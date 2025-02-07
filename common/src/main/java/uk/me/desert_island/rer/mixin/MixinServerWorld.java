@@ -3,11 +3,13 @@
 package uk.me.desert_island.rer.mixin;
 
 import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.progress.ChunkProgressListener;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.RandomSequences;
 import net.minecraft.world.level.CustomSpawner;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.DimensionType;
@@ -28,12 +30,13 @@ import java.util.function.Supplier;
 
 @Mixin(ServerLevel.class)
 public abstract class MixinServerWorld extends Level {
-    protected MixinServerWorld(WritableLevelData writableLevelData, ResourceKey<Level> resourceKey, Holder<DimensionType> holder, Supplier<ProfilerFiller> supplier, boolean bl, boolean bl2, long l, int i) {
-        super(writableLevelData, resourceKey, holder, supplier, bl, bl2, l, i);
+
+    protected MixinServerWorld(WritableLevelData writableLevelData, ResourceKey<Level> resourceKey, RegistryAccess registryAccess, Holder<DimensionType> holder, Supplier<ProfilerFiller> supplier, boolean bl, boolean bl2, long l, int i) {
+        super(writableLevelData, resourceKey, registryAccess, holder, supplier, bl, bl2, l, i);
     }
 
     @Inject(at = @At("RETURN"), method = "<init>")
-    private void constructor(MinecraftServer minecraftServer, Executor executor, LevelStorageSource.LevelStorageAccess levelStorageAccess, ServerLevelData serverLevelData, ResourceKey<Level> resourceKey, LevelStem levelStem, ChunkProgressListener chunkProgressListener, boolean bl, long l, List<CustomSpawner> list, boolean bl2, CallbackInfo ci) {
+    private void constructor(MinecraftServer minecraftServer, Executor executor, LevelStorageSource.LevelStorageAccess levelStorageAccess, ServerLevelData serverLevelData, ResourceKey<Level> resourceKey, LevelStem levelStem, ChunkProgressListener chunkProgressListener, boolean bl, long l, List<CustomSpawner> list, boolean bl2, RandomSequences randomSequences, CallbackInfo ci) {
         DimensionDataStorage psm = ((ServerLevel) (Object) this).getDataStorage();
         WorldGenState.registerPsm(psm, resourceKey);
     }
