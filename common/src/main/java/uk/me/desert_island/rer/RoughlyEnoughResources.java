@@ -26,7 +26,6 @@ public class RoughlyEnoughResources {
     public static final int WORLD_HEIGHT = MAX_WORLD_Y - MIN_WORLD_Y;
 
     public static void onInitialize() {
-        RerDataComponents.init();
         RERUtils.LOGGER.info("RoughlyEnoughPacketSize?  Possibly.");
         NetworkManager.registerReceiver(NetworkManager.c2s(), RequestLootSynqC2SPacket.TYPE, RequestLootSynqC2SPacket.CODEC, (packet, context) -> {
             context.queue(() -> sendLootToPlayers(GameInstance.getServer(), Collections.singletonList((ServerPlayer) context.getPlayer())));
