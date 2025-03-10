@@ -4,9 +4,7 @@ plugins {
 
 architectury {
     platformSetupLoomIde()
-    neoForge {
-        platformPackage = "neoforge"
-    }
+    neoForge()
 }
 
 configurations {
@@ -14,7 +12,6 @@ configurations {
     shadowCommon // Don't use shadow from the shadow plugin since it *excludes* files.
     compileClasspath.extendsFrom common
     runtimeClasspath.extendsFrom common
-    developmentNeoForge.extendsFrom common
 }
 
 repositories {
@@ -24,11 +21,8 @@ repositories {
     mavenCentral()
 }
 
-sourceSets {
-    testmod {
-        runtimeClasspath += main.runtimeClasspath
-        compileClasspath += main.compileClasspath
-    }
+loom {
+
 }
 
 dependencies {
@@ -38,16 +32,14 @@ dependencies {
     shadowCommon(project(path: ":common", configuration: "transformProductionNeoForge")) { transitive false }
 
     modCompileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:${rootProject.rei_version}")
-    var type = rootProject.properties.get("item_viewer_type");
+    modApi("dev.architectury:architectury-neoforge:${rootProject.architectury_version}")
 }
 
 processResources {
-    String finalVersion = "${project.mod_version}+${rootProject.minecraft_version}"
-
-    filesMatching("META-INF/neoforge.neoforge.mods.toml") {
-        expand "version": finalVersion
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand "version": project.version
     }
-    inputs.property "META-INF/neoforge.neoforge.mods.toml", finalVersion
+    inputs.property "version", project.version
 }
 
 shadowJar {
@@ -61,17 +53,11 @@ shadowJar {
 remapJar {
     input.set shadowJar.archiveFile
     dependsOn shadowJar
-    archiveClassifier.set ""
+    archiveClassifier = null
 }
 
 sourcesJar {
     def commonSources = project(":common").sourcesJar
     dependsOn commonSources
     from commonSources.archiveFile.map { zipTree(it) }
-}
-
-components.java {
-    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
-        skip()
-    }
 }
