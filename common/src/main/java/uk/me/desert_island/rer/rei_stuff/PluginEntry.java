@@ -24,7 +24,7 @@ import static uk.me.desert_island.rer.RoughlyEnoughResources.WORLD_HEIGHT;
 
 @Environment(EnvType.CLIENT)
 public class PluginEntry implements REIClientPlugin {
-    public static final ResourceLocation PLUGIN_ID = new ResourceLocation("roughlyenoughresources", "rer_plugin");
+    public static final ResourceLocation PLUGIN_ID = ResourceLocation.fromNamespaceAndPath("roughlyenoughresources", "rer_plugin");
 
     @Override
     public void registerCategories(CategoryRegistry registry) {
@@ -42,17 +42,17 @@ public class PluginEntry implements REIClientPlugin {
                 registry.add(new WorldGenDisplay(RERUtils.fromBlockToItemStackWithText(block), block, world));
             }
 
-            ResourceLocation dropTableId = block.getLootTable();
+            ResourceLocation dropTableId = block.getLootTable().location();
 
-            if (dropTableId != null && dropTableId != BuiltInLootTables.EMPTY) {
+            if (dropTableId != null && dropTableId != BuiltInLootTables.EMPTY.location()) {
                 registry.add(new BlockLootDisplay(block));
             }
         }
 
         for (EntityType<?> entityType : BuiltInRegistries.ENTITY_TYPE) {
-            ResourceLocation lootTableId = entityType.getDefaultLootTable();
+            ResourceLocation lootTableId = entityType.getDefaultLootTable().location();
 
-            if (lootTableId != null && lootTableId != BuiltInLootTables.EMPTY) {
+            if (lootTableId != null && lootTableId != BuiltInLootTables.EMPTY.location()) {
                 registry.add(new EntityLootDisplay(entityType));
             }
         }

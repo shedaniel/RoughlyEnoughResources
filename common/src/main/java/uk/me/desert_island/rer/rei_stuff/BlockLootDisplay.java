@@ -15,18 +15,9 @@ public class BlockLootDisplay extends LootDisplay {
     public BlockLootDisplay(Block block) {
         this.inputBlock = block;
         this.inputStack = RERUtils.fromBlockToItemStack(block);
-        this.lootTableId = block.getLootTable();
+        this.lootTableId = block.getLootTable().location();
         this.contextType = LootContextParamSets.BLOCK;
     }
-
-    //    @Override
-    //    boolean fillContextBuilder(Builder contextBuilder, World world) {
-    //        contextBuilder.put(LootContextParameters.TOOL, new ItemStack(Items.DIAMOND_PICKAXE));
-    //        contextBuilder.put(LootContextParameters.POSITION, BlockPos.ORIGIN);
-    //        contextBuilder.put(LootContextParameters.BLOCK_STATE, inputBlock.getDefaultState());
-    //
-    //        return true;
-    //    }
 
     @Override
     public ResourceLocation getLocation() {
